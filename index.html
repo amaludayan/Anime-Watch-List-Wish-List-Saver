@@ -1096,7 +1096,7 @@
   .shelf-unit{ padding:0 20px; margin-bottom:2px; }
   .shelf-books{
     display:flex; align-items:flex-end; justify-content:flex-start;
-    gap:26px; flex-wrap:wrap;
+    gap:0; flex-wrap:wrap;
     padding:14px 4px 34px;
     min-height:180px;
     perspective:1000px;
@@ -1113,11 +1113,16 @@
   .book-spine{
     position:relative;
     width:92px; height:144px; flex:none;
+    margin-left:-20px; /* packed side-by-side like real books on a shelf */
     cursor:pointer;
     transform-style:preserve-3d;
     transform:rotateY(-22deg);
-    transition:transform .35s cubic-bezier(.22,.61,.36,1);
+    transform-origin:0% 50%;
+    transition:transform .4s cubic-bezier(.22,.61,.36,1);
+    will-change:transform;
+    z-index:1;
   }
+  .book-spine:first-child{ margin-left:0; }
   .book-spine .b-front{
     position:absolute; inset:0;
     border-radius:1px 3px 3px 1px;
@@ -1173,13 +1178,16 @@
     transition:opacity .3s ease;
     transform:translateZ(-2px);
   }
-  .book-spine:hover{ transform:rotateY(-30deg) translateY(-8px); }
+  .book-spine:hover{
+    transform:translateY(-14px) scale(1.16) rotateY(0deg);
+    z-index:5;
+  }
   .book-spine:hover .b-front{ box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 30px 46px -6px rgba(0,0,0,.65); }
   .book-spine:hover::after{ opacity:.4; }
   .book-spine:hover .b-edge-glow{ opacity:1; }
-  .book-spine.editing-mode:hover{ transform:rotateY(-22deg); }
+  .book-spine.editing-mode:hover{ transform:rotateY(-22deg); z-index:1; }
   .book-spine.editing-mode:hover .b-front{ box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 22px 34px -6px rgba(0,0,0,.6); }
-  .book-spine.selected-for-open{ transform:rotateY(-30deg) translateY(-8px); }
+  .book-spine.selected-for-open{ transform:translateY(-14px) scale(1.16) rotateY(0deg); z-index:5; }
   .book-spine.selected-for-open .b-edge-glow{ opacity:1; }
   .book-spine.hidden-for-open{ opacity:0; pointer-events:none; }
   /* the delete badge must sit in front of the extruded 3D cover face, not
