@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>月鑑 — Gekkan Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#121212; --bg2:#18181b; --bg3:#1e1e1c;
+    --ink:#e9e6db; --inkDim:#8c8a80;
+    --hairline:rgba(233,230,219,0.09); --hairlineStrong:rgba(233,230,219,0.18);
+    --jade:#4fae8a; --jadeBright:#8fe6c4; --danger:#c2564c;
+  }
+  [data-theme="light"]{
+    --bg:#f1ead9; --bg2:#e9dfc7; --bg3:#efe6d2;
+    --ink:#241f16; --inkDim:#79705d;
+    --hairline:rgba(36,31,22,0.10); --hairlineStrong:rgba(36,31,22,0.22);
+    --jade:#2f7d5e; --jadeBright:#1f5c44; --danger:#a23b34;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Zen Kaku Gothic New',sans-serif;transition:background .5s ease,color .5s ease;}
+  .serif{font-family:'Noto Serif JP',serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .wrap{max-width:1152px;margin:0 auto;padding:40px 24px 96px;}
+
+  /* theme toggle */
+  .toggle{position:fixed;top:20px;right:20px;z-index:50;width:54px;height:28px;border-radius:999px;
+    border:1px solid var(--hairlineStrong);background:var(--bg2);padding:3px;cursor:pointer;transition:background .3s,border-color .3s;}
+  .toggle .knob{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:999px;
+    background:var(--jade);font-size:10px;color:#fff;transition:transform .24s cubic-bezier(.4,0,.2,1);}
+  [data-theme="dark"] .toggle .knob{color:var(--bg);transform:translateX(0);}
+  [data-theme="light"] .toggle .knob{transform:translateX(26px);}
+
+  /* header */
+  .header-row{position:relative;display:flex;align-items:center;min-height:40px;}
+  .menu-btn{width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--hairline);background:var(--bg2);cursor:pointer;}
+  .menu-spacer{width:40px;}
+  .title-block{flex:1;text-align:center;}
+  .eyebrow{font-size:12px;letter-spacing:3px;color:var(--inkDim);}
+  .title{font-size:28px;margin-top:2px;}
+
+  .genre-menu{position:absolute;top:calc(100% + 10px);left:0;width:260px;max-height:360px;overflow-y:auto;
+    background:var(--bg2);border:1px solid var(--hairlineStrong);border-radius:2px;
+    box-shadow:0 12px 32px rgba(0,0,0,.35);display:none;z-index:40;}
+  .genre-menu.open{display:block;}
+  .genre-item{padding:10px 16px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--hairline);}
+  .genre-item:last-child{border-bottom:none;}
+  .genre-item:hover{background:var(--bg3);}
+  .genre-item.active{color:var(--jade);background:var(--bg3);}
+
+  /* search */
+  .search-wrap{margin:32px auto 0;max-width:420px;}
+  .search-box{display:flex;align-items:center;gap:12px;height:42px;padding:0 16px;
+    border:1px solid var(--hairlineStrong);background:var(--bg2);}
+  .search-box input{flex:1;background:transparent;border:none;outline:none;font-size:14px;color:var(--ink);font-family:'Zen Kaku Gothic New',sans-serif;}
+  .search-box input::placeholder{color:var(--inkDim);}
+  .clear-btn{background:none;border:none;color:var(--inkDim);cursor:pointer;font-size:14px;}
+  .genre-pill-wrap{display:flex;justify-content:center;margin-top:12px;}
+  .genre-pill{font-size:12px;padding:4px 10px;border:1px solid var(--jade);color:var(--jade);display:flex;align-items:center;gap:6px;}
+  .genre-pill span{cursor:pointer;}
+
+  .error-msg{margin-top:40px;text-align:center;font-size:13px;color:var(--danger);}
+  .empty-msg{margin-top:64px;text-align:center;font-size:13px;color:var(--inkDim);}
+
+  /* grid */
+  .grid{margin-top:40px;display:grid;gap:20px 20px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+  .card{cursor:pointer;}
+  .poster{position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;background:var(--bg2);border:1px solid var(--hairline);}
+  .poster img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease,filter .4s ease;display:block;}
+  .card:hover .poster img{transform:scale(1.04);filter:brightness(.7);}
+  .score-badge{position:absolute;top:6px;right:6px;font-size:11px;padding:2px 6px;background:rgba(0,0,0,.55);color:var(--jadeBright);}
+  .hover-info{position:absolute;inset:0;display:flex;align-items:flex-end;padding:10px;opacity:0;
+    transition:opacity .25s ease;background:linear-gradient(to top,rgba(0,0,0,.85),transparent 60%);}
+  .card:hover .hover-info{opacity:1;}
+  .hover-info span{font-size:11px;color:#e9e6db;}
+  .card-title{margin-top:8px;font-size:13px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+  .skeleton-poster{width:100%;aspect-ratio:2/3;background:var(--bg2);border:1px solid var(--hairline);}
+  .skeleton-line{margin-top:8px;height:12px;width:80%;background:var(--bg2);}
+
+  /* pagination */
+  .pagination{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;margin:56px 0 24px;}
+  .page-btn{width:32px;height:32px;font-size:13px;background:transparent;border:1px solid var(--hairline);
+    color:var(--ink);cursor:pointer;transition:all .15s ease;}
+  .page-btn.active{background:var(--jade);border-color:var(--jade);color:var(--bg);}
+  .page-btn:disabled{opacity:.4;cursor:default;}
+  .page-ellipsis{width:32px;text-align:center;color:var(--inkDim);font-size:13px;}
+
+  @media(max-width:520px){ .title{font-size:22px;} .wrap{padding:32px 16px 80px;} }
+</style>
+</head>
+<body data-theme="dark">
+
+<button class="toggle" id="themeToggle" aria-label="Toggle theme"><span class="knob" id="themeKnob">月</span></button>
+
+<div class="wrap">
+  <div class="header-row">
+    <div style="position:relative;">
+      <button class="menu-btn" id="menuBtn" aria-label="Open genre filter">
+        <svg width="22" height="22" viewBox="0 0 22 22">
+          <g stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round">
+            <line x1="3" y1="6" x2="19" y2="6"/>
+            <line x1="3" y1="11" x2="14" y2="11"/>
+            <line x1="3" y1="16" x2="19" y2="16"/>
+          </g>
+          <circle cx="19" cy="11" r="1.4" fill="var(--jade)"/>
+        </svg>
+      </button>
+      <div class="genre-menu" id="genreMenu">
+        <div class="genre-item active" data-id="">全て — All genres</div>
+      </div>
+    </div>
+
+    <div class="title-block">
+      <div class="eyebrow serif">GEKKAN ARCHIVE</div>
+      <h1 class="title serif">月鑑</h1>
+    </div>
+
+    <div class="menu-spacer"></div>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 16 16">
+        <circle cx="7" cy="7" r="5" fill="none" stroke="var(--inkDim)" stroke-width="1.4"/>
+        <line x1="11" y1="11" x2="15" y2="15" stroke="var(--inkDim)" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <input id="searchInput" placeholder="Search titles…" />
+      <button class="clear-btn" id="clearBtn" style="display:none;" aria-label="Clear search">×</button>
+    </div>
+    <div class="genre-pill-wrap" id="genrePillWrap" style="display:none;">
+      <span class="genre-pill"><span id="genrePillLabel"></span><span id="genrePillClear">×</span></span>
+    </div>
+  </div>
+
+  <div id="errorMsg" class="error-msg" style="display:none;"></div>
+  <div id="grid" class="grid"></div>
+  <div id="emptyMsg" class="empty-msg" style="display:none;">No results. Try a different search or genre.</div>
+  <div id="pagination" class="pagination"></div>
+</div>
+
+<script>
+const API = "https://api.jikan.moe/v4";
+const state = { query:"", genreId:"", genreName:"", page:1, lastPage:1, loading:true, results:[] };
+let debounceTimer;
+
+const $ = (id) => document.getElementById(id);
+
+/* theme */
+$("themeToggle").addEventListener("click", () => {
+  const body = document.body;
+  const next = body.dataset.theme === "dark" ? "light" : "dark";
+  body.dataset.theme = next;
+  $("themeKnob").textContent = next === "dark" ? "月" : "日";
+});
+
+/* genres */
+fetch(`${API}/genres/anime`).then(r=>r.json()).then(d=>{
+  const genres = (d.data||[]).sort((a,b)=>a.name.localeCompare(b.name));
+  const menu = $("genreMenu");
+  genres.forEach(g=>{
+    const item = document.createElement("div");
+    item.className = "genre-item";
+    item.dataset.id = g.mal_id;
+    item.textContent = g.name;
+    item.addEventListener("click", ()=>{
+      state.genreId = g.mal_id;
+      state.genreName = g.name;
+      state.page = 1;
+      document.querySelectorAll(".genre-item").forEach(el=>el.classList.remove("active"));
+      item.classList.add("active");
+      $("genreMenu").classList.remove("open");
+      $("genrePillWrap").style.display = "flex";
+      $("genrePillLabel").textContent = g.name;
+      fetchAnime();
+    });
+    menu.appendChild(item);
+  });
+}).catch(()=>{});
+
+$("genreMenu").addEventListener("click", (e)=>{
+  if(e.target.dataset.id === ""){
+    state.genreId = ""; state.genreName = ""; state.page = 1;
+    document.querySelectorAll(".genre-item").forEach(el=>el.classList.remove("active"));
+    e.target.classList.add("active");
+    $("genreMenu").classList.remove("open");
+    $("genrePillWrap").style.display = "none";
+    fetchAnime();
+  }
+});
+
+$("menuBtn").addEventListener("click", (e)=>{
+  e.stopPropagation();
+  $("genreMenu").classList.toggle("open");
+});
+document.addEventListener("click", (e)=>{
+  if(!$("genreMenu").contains(e.target) && e.target !== $("menuBtn")){
+    $("genreMenu").classList.remove("open");
+  }
+});
+$("genrePillClear").addEventListener("click", ()=>{
+  state.genreId=""; state.genreName=""; state.page=1;
+  document.querySelectorAll(".genre-item").forEach(el=>el.classList.remove("active"));
+  $("genreMenu").querySelector('[data-id=""]').classList.add("active");
+  $("genrePillWrap").style.display = "none";
+  fetchAnime();
+});
+
+/* search */
+$("searchInput").addEventListener("input", (e)=>{
+  const v = e.target.value;
+  $("clearBtn").style.display = v ? "block" : "none";
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(()=>{
+    state.query = v;
+    state.page = 1;
+    fetchAnime();
+  }, 500);
+});
+$("clearBtn").addEventListener("click", ()=>{
+  $("searchInput").value = "";
+  $("clearBtn").style.display = "none";
+  state.query = ""; state.page = 1;
+  fetchAnime();
+});
+
+/* rendering */
+function renderSkeleton(){
+  const grid = $("grid");
+  grid.innerHTML = "";
+  for(let i=0;i<20;i++){
+    const d = document.createElement("div");
+    d.innerHTML = `<div class="skeleton-poster"></div><div class="skeleton-line"></div>`;
+    grid.appendChild(d);
+  }
+}
+
+function renderResults(){
+  const grid = $("grid");
+  grid.innerHTML = "";
+  $("emptyMsg").style.display = state.results.length === 0 ? "block" : "none";
+  state.results.forEach(anime=>{
+    const img = anime.images?.webp?.large_image_url || anime.images?.jpg?.large_image_url || "";
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="poster">
+        ${img ? `<img src="${img}" alt="${escapeHtml(anime.title)}" loading="lazy" />` : ""}
+        <div class="score-badge mono">${anime.score ? anime.score.toFixed(1) : "—"}</div>
+        <div class="hover-info"><span class="mono">${anime.type||"—"} · ${anime.episodes ?? "?"} ep</span></div>
+      </div>
+      <div class="card-title">${escapeHtml(anime.title)}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str||"";
+  return d.innerHTML;
+}
+
+function renderPagination(){
+  const el = $("pagination");
+  el.innerHTML = "";
+  const lastPage = Math.min(state.lastPage, 200);
+  if(lastPage <= 1) return;
+
+  const prev = document.createElement("button");
+  prev.className = "page-btn"; prev.textContent = "‹";
+  prev.disabled = state.page === 1;
+  prev.addEventListener("click", ()=>goToPage(Math.max(1,state.page-1)));
+  el.appendChild(prev);
+
+  const pages = [];
+  for(let p=1;p<=lastPage;p++){
+    if(p===1||p===lastPage||Math.abs(p-state.page)<=1) pages.push(p);
+    else if(pages[pages.length-1] !== "...") pages.push("...");
+  }
+  pages.forEach(p=>{
+    if(p==="..."){
+      const s = document.createElement("span");
+      s.className = "page-ellipsis"; s.textContent = "…";
+      el.appendChild(s);
+    } else {
+      const b = document.createElement("button");
+      b.className = "page-btn mono" + (p===state.page ? " active":"");
+      b.textContent = p;
+      b.addEventListener("click", ()=>goToPage(p));
+      el.appendChild(b);
+    }
+  });
+
+  const next = document.createElement("button");
+  next.className = "page-btn"; next.textContent = "›";
+  next.disabled = state.page === lastPage;
+  next.addEventListener("click", ()=>goToPage(Math.min(lastPage,state.page+1)));
+  el.appendChild(next);
+}
+
+function goToPage(p){
+  state.page = p;
+  fetchAnime();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+async function fetchAnime(){
+  state.loading = true;
+  $("errorMsg").style.display = "none";
+  renderSkeleton();
+  const params = new URLSearchParams();
+  params.set("page", state.page);
+  params.set("limit", "20");
+  params.set("sfw", "true");
+  if(state.query.trim()) params.set("q", state.query.trim());
+  if(state.genreId) params.set("genres", state.genreId);
+  if(!state.query.trim()) params.set("order_by", "popularity");
+
+  try{
+    const res = await fetch(`${API}/anime?${params.toString()}`);
+    if(!res.ok) throw new Error("bad status");
+    const data = await res.json();
+    state.results = data.data || [];
+    state.lastPage = data.pagination?.last_visible_page || 1;
+    renderResults();
+  }catch(e){
+    state.results = [];
+    $("grid").innerHTML = "";
+    $("errorMsg").textContent = "Couldn't reach the Jikan API. Try again in a moment.";
+    $("errorMsg").style.display = "block";
+  }finally{
+    state.loading = false;
+    renderPagination();
+  }
+}
+
+fetchAnime();
+</script>
+</body>
+</html>
