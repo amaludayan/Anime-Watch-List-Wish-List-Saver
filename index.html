@@ -1358,6 +1358,18 @@
   .book-scene.stage-open .book-close-btn{ opacity:1; pointer-events:auto; }
   .book-close-btn svg{ width:14px; height:14px; }
 
+  /* back arrow — returns to the shelf; sits opposite the close button, always reachable */
+  .book-back-btn{
+    position:absolute; top:-16px; left:-16px; z-index:7;
+    width:34px; height:34px; border-radius:50%;
+    display:grid; place-items:center;
+    background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
+    cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,.45);
+    opacity:1; transition:transform .2s ease, color .2s ease;
+  }
+  .book-back-btn:hover{ transform:scale(1.08); color:var(--jade-1); }
+  .book-back-btn svg{ width:15px; height:15px; }
+
   @media (max-width:520px){
     .book-scene.stage-open{ width:min(92vw,420px); }
     .book-pageblock{ flex-direction:column; }
@@ -2837,7 +2849,7 @@
   function handleBookTap(id, ev){
     if (openBookId === id && openBookStage === 'cover'){
       openBookStage = 'open';
-      renderBookOverlay();
+      openBookPages();
     } else if (openBookId === id && openBookStage === 'open'){
       // already fully open — ignore taps on the spine behind the overlay
     } else {
@@ -2846,7 +2858,7 @@
       const spineEl = ev && ev.currentTarget;
       openBookOriginRect = spineEl ? spineEl.getBoundingClientRect() : null;
       renderShelf();
-      renderBookOverlay();
+      mountBookScene();
     }
   }
 
@@ -2858,14 +2870,16 @@
     renderShelf();
   }
 
-  function renderBookOverlay(){
+  // Builds the book scene fresh (called once per open) and flies it in from
+  // wherever it actually sits on the shelf. Re-used afterwards for the
+  // open/close hinge transition instead of being torn down and rebuilt.
+  function mountBookScene(){
     const entry = lists.wish[openBookId];
     if (!entry){ closeBookOverlay(true); return; }
     const meta = [formatLabel(entry.format), entry.year, entry.score ? `★ ${entry.score}` : null].filter(Boolean).join(' · ');
-    const isOpen = openBookStage === 'open';
 
     bookOverlay.innerHTML = `
-      <div class="book-scene ${isOpen ? 'stage-open' : ''}" id="bookPop">
+      <div class="book-scene" id="bookPop">
         <div class="book-pageblock">
           <div class="book-page-left">
             <div class="bp-photo-frame">
@@ -2882,7 +2896,7 @@
                 <span>${entry.score ? `★ ${entry.score}` : 'Unrated'}</span>
               </div>
               <span class="section-label">Personal Notes</span>
-              <div class="bp-notes-block ${entry.notes ? '' : 'empty'}">${entry.notes ? escapeHtml(entry.notes) : 'No notes yet for this title.'}</div>
+              <div class="bp-notes-block ${entry.notes ? '' : 'empty'}" id="bookNotesBlock">${entry.notes ? escapeHtml(entry.notes) : 'No notes yet for this title.'}</div>
             </div>
             <div class="book-page-actions">
               <button class="btn-ghost" id="bookEditNotesBtn">Edit Notes</button>
@@ -2903,16 +2917,17 @@
           </div>
           <div class="book-cover-back"></div>
         </div>
+        <button class="book-back-btn" id="bookBackBtn" aria-label="Back to shelf"><i data-lucide="arrow-left"></i></button>
         <button class="book-close-btn" id="bookOverlayClose" aria-label="Close"><i data-lucide="x"></i></button>
       </div>`;
 
     const scene = document.getElementById('bookPop');
 
-    // On the very first pop (cover stage, freshly opened), animate the book
-    // out from wherever it actually sits on the shelf, not from a generic centre.
-    if (!isOpen && openBookOriginRect){
+    // Fly the closed cover out from wherever it actually sits on the shelf,
+    // rather than fading in from a generic centre.
+    if (openBookOriginRect){
       const overlayRect = bookOverlay.getBoundingClientRect();
-      const sceneW = scene.offsetWidth, sceneH = scene.offsetHeight;
+      const sceneW = scene.offsetWidth;
       const centerX = overlayRect.left + overlayRect.width / 2;
       const centerY = overlayRect.top + overlayRect.height / 2;
       const originX = openBookOriginRect.left + openBookOriginRect.width / 2;
@@ -2924,29 +2939,48 @@
       scene.style.setProperty('--orot', '-30deg');
     }
 
-    void scene.offsetWidth; // commit the origin transform before triggering the transition
-    bookOverlay.classList.add('show');
-    renderIcons();
+    // Commit the origin transform in one frame, then release it on the next
+    // so the browser actually animates the fly-in instead of snapping.
+    void scene.offsetWidth;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => { bookOverlay.classList.add('show'); });
+    });
 
+    renderIcons();
+    attachBookSceneListeners(entry);
+  }
+
+  // Toggles the already-mounted scene into its open (hinge-flip) state —
+  // never rebuilds the DOM, so the CSS transition actually plays.
+  function openBookPages(){
+    const scene = document.getElementById('bookPop');
+    if (!scene){ mountBookScene(); return; }
+    requestAnimationFrame(() => scene.classList.add('stage-open'));
+  }
+
+  function attachBookSceneListeners(entry){
     document.getElementById('bookCoverFace').addEventListener('click', () => {
       if (openBookStage === 'cover') handleBookTap(openBookId);
     });
     document.getElementById('bookOverlayClose').addEventListener('click', () => closeBookOverlay());
+    document.getElementById('bookBackBtn').addEventListener('click', () => closeBookOverlay());
     bookOverlay.onclick = (e) => { if (e.target === bookOverlay) closeBookOverlay(); };
 
-    if (isOpen){
-      document.getElementById('bookEditNotesBtn').addEventListener('click', () => {
-        const updated = prompt('Edit your notes for "' + entry.title + '":', entry.notes || '');
-        if (updated === null) return;
-        entry.notes = updated.trim();
-        saveLists(lists);
-        renderBookOverlay();
-      });
-      document.getElementById('bookFullRecordBtn').addEventListener('click', () => {
-        closeShelf();
-        openModal(openBookId);
-      });
-    }
+    document.getElementById('bookEditNotesBtn').addEventListener('click', () => {
+      const updated = prompt('Edit your notes for "' + entry.title + '":', entry.notes || '');
+      if (updated === null) return;
+      entry.notes = updated.trim();
+      saveLists(lists);
+      const notesBlock = document.getElementById('bookNotesBlock');
+      if (notesBlock){
+        notesBlock.textContent = entry.notes ? entry.notes : 'No notes yet for this title.';
+        notesBlock.classList.toggle('empty', !entry.notes);
+      }
+    });
+    document.getElementById('bookFullRecordBtn').addEventListener('click', () => {
+      closeShelf();
+      openModal(openBookId);
+    });
   }
 
   // ---- Settings / Import-Export ----
