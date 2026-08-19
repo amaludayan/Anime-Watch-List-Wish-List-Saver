@@ -1316,7 +1316,7 @@
     z-index:3;
     cursor:pointer;
   }
-  .book-scene.stage-open .book-cover-face{ transform:rotateY(-172deg); cursor:default; }
+  .book-scene.stage-open .book-cover-face{ transform:rotateY(-172deg); cursor:default; pointer-events:none; }
 
   .book-cover-front, .book-cover-back{
     position:absolute; inset:0;
@@ -3000,8 +3000,9 @@
       }
     });
     document.getElementById('bookFullRecordBtn').addEventListener('click', () => {
+      const id = entry.id;
       closeShelf();
-      openModal(openBookId);
+      openModal(id);
     });
   }
 
