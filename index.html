@@ -799,21 +799,48 @@
   .fab-option .fab-option-icon svg{ width:15px; height:15px; }
 
   .fab-main{
+    position:relative;
     width:60px; height:60px;
     display:grid; place-items:center;
     background:var(--jade-0);
     border:1px solid var(--jade-1);
+    border-radius:22px;
     color:var(--paper);
     box-shadow:0 8px 26px rgba(47,111,86,.5), 0 2px 8px rgba(0,0,0,.4);
     cursor:pointer;
-    transition:transform .45s cubic-bezier(.34,1.56,.64,1), background .25s ease, box-shadow .3s ease;
+    transform:rotate(45deg);
+    animation:fabBreathe 3.2s ease-in-out infinite;
+    transition:transform .55s cubic-bezier(.34,1.56,.64,1), border-radius .55s cubic-bezier(.34,1.56,.64,1), background .25s ease, box-shadow .3s ease;
   }
-  .fab-main:active{ transform:scale(.92); }
-  .fab-main svg{ width:24px; height:24px; transition:transform .4s cubic-bezier(.65,0,.35,1); }
+  .fab-main::before{
+    content:"";
+    position:absolute; inset:-6px;
+    border-radius:inherit;
+    border:1px solid var(--jade-1);
+    opacity:0;
+    animation:fabPulseRing 3.2s ease-out infinite;
+    pointer-events:none;
+  }
+  @keyframes fabBreathe{
+    0%,100%{ box-shadow:0 8px 26px rgba(47,111,86,.5), 0 2px 8px rgba(0,0,0,.4); }
+    50%{ box-shadow:0 8px 34px rgba(95,184,148,.75), 0 2px 10px rgba(0,0,0,.4); }
+  }
+  @keyframes fabPulseRing{
+    0%{ opacity:.55; transform:scale(1); }
+    70%{ opacity:0; transform:scale(1.35); }
+    100%{ opacity:0; transform:scale(1.35); }
+  }
+  .fab-main:active{ transform:rotate(45deg) scale(.9); }
+  .fab-main svg{ width:24px; height:24px; transition:transform .5s cubic-bezier(.65,0,.35,1); transform:rotate(-45deg); }
   .fab-wrap.open .fab-main{
     background:var(--ink-2); border-color:var(--line-1);
     color:var(--ink-text);
+    border-radius:50%;
+    transform:rotate(135deg);
+    animation:none;
+    box-shadow:0 8px 26px rgba(0,0,0,.45);
   }
+  .fab-wrap.open .fab-main::before{ animation:none; opacity:0; }
   .fab-wrap.open .fab-main svg{ transform:rotate(45deg); }
 
   /* ============ PICKER OVERLAY ============ */
@@ -2011,14 +2038,11 @@
     pickerBackdrop.classList.remove('closing');
     void pickerBackdrop.offsetHeight;
     requestAnimationFrame(() => requestAnimationFrame(() => pickerBackdrop.classList.add('open')));
-    // Default view: whatever is currently loaded on the home grid, so users
-    // can pick straight from what they're already browsing.
-    picker.items = (lastLoadedAnime && lastLoadedAnime.length) ? lastLoadedAnime : [];
-    if (picker.items.length){
-      renderPickerGrid(picker.items);
-    } else {
-      pickerSearchGeneric('');
-    }
+    // Default view: always pull a broad, popularity-sorted set from the
+    // archive (not just whatever narrow slice — e.g. a genre or search
+    // filter — happens to be on the home grid), so users have plenty to
+    // choose from without needing to search themselves.
+    pickerSearchGeneric('');
     setTimeout(() => pickerSearchInput.focus({ preventScroll: true }), 350);
   }
   function closePicker(){
@@ -2094,12 +2118,7 @@
     clearTimeout(pickerSearchTimer);
     const value = pickerSearchInput.value.trim();
     pickerSearchTimer = setTimeout(() => {
-      if (!value){
-        picker.items = (lastLoadedAnime && lastLoadedAnime.length) ? lastLoadedAnime : [];
-        renderPickerGrid(picker.items);
-      } else {
-        pickerSearchGeneric(value);
-      }
+      pickerSearchGeneric(value);
     }, 450);
   });
 
@@ -2109,8 +2128,8 @@
     pickerGrid.innerHTML = `<div class="picker-state">Searching…</div>`;
     try {
       const variables = query
-        ? { page: 1, perPage: 24, search: query, sort: ['SEARCH_MATCH'] }
-        : { page: 1, perPage: 24, sort: ['POPULARITY_DESC'] };
+        ? { page: 1, perPage: 30, search: query, sort: ['SEARCH_MATCH'] }
+        : { page: 1, perPage: 40, sort: ['POPULARITY_DESC'] };
       const data = await gqlFetch(LIST_QUERY, variables);
       if (token !== pickerSearchToken) return;
       picker.items = data.Page?.media || [];
