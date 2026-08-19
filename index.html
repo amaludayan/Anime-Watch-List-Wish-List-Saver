@@ -1124,8 +1124,8 @@
      stack rather than a flat row. --i is set inline per book. */
   .book-spine{
     --i:0;
-    --book-thickness:24px;
-    --book-step-x:26px;
+    --book-thickness:7px;
+    --book-step-x:34px;
     position:absolute;
     left:0; bottom:0;
     width:92px; height:144px;
@@ -1197,9 +1197,17 @@
   .book-spine:hover .b-front{ box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 30px 46px -6px rgba(0,0,0,.65); }
   .book-spine:hover::after{ opacity:.4; }
   .book-spine:hover .b-edge-glow{ opacity:1; }
+  /* books stacked after the hovered one shift further right (on top of
+     their own stagger offset) to open a gap and reveal the hovered book */
+  .book-spine:hover ~ .book-spine{
+    transform:translateX(calc(var(--i) * var(--book-step-x) + 46px)) translateZ(calc(var(--i) * var(--book-thickness) * -1));
+  }
   .book-spine.editing-mode:hover{
     transform:translateX(calc(var(--i) * var(--book-step-x))) translateZ(calc(var(--i) * var(--book-thickness) * -1));
     z-index:1;
+  }
+  .book-spine.editing-mode:hover ~ .book-spine{
+    transform:translateX(calc(var(--i) * var(--book-step-x))) translateZ(calc(var(--i) * var(--book-thickness) * -1));
   }
   .book-spine.editing-mode:hover .b-front{ box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 22px 34px -6px rgba(0,0,0,.6); }
   .book-spine.selected-for-open{
