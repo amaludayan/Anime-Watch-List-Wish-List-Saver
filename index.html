@@ -907,8 +907,9 @@
 
   .picker-body{
     flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-    padding:16px 18px 90px;
+    padding:16px 18px 24px;
   }
+  .picker-body .pagination{ padding:22px 0 90px; }
   .picker-grid{
     display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
   }
@@ -1265,6 +1266,7 @@
     </div>
     <div class="picker-body">
       <div class="picker-grid" id="pickerGrid"></div>
+      <nav class="pagination" id="pickerPagination" aria-label="Picker pagination"></nav>
     </div>
     <div class="picker-footer" id="pickerFooter">
       <span class="count-label" id="pickerCountLabel">0 selected</span>
@@ -2025,14 +2027,20 @@
   const picker = {
     target: 'watched',
     items: [],          // anime currently rendered in the grid (raw AniList shape)
-    selected: new Map()  // id -> anime object
+    selected: new Map(),// id -> anime object
+    query: '',
+    page: 1,
+    lastPage: 1
   };
+  const pickerPaginationEl = document.getElementById('pickerPagination');
 
   function openPicker(target){
     picker.target = target;
     picker.selected.clear();
     pickerTargetLabel.textContent = LIST_NAMES[target];
     pickerSearchInput.value = '';
+    picker.query = '';
+    picker.page = 1;
     updatePickerFooter();
     lockScroll();
     pickerBackdrop.classList.remove('closing');
@@ -2040,9 +2048,9 @@
     requestAnimationFrame(() => requestAnimationFrame(() => pickerBackdrop.classList.add('open')));
     // Default view: always pull a broad, popularity-sorted set from the
     // archive (not just whatever narrow slice — e.g. a genre or search
-    // filter — happens to be on the home grid), so users have plenty to
-    // choose from without needing to search themselves.
-    pickerSearchGeneric('');
+    // filter — happens to be on the home grid), and let the user page
+    // through the full catalog exactly like the home screen does.
+    pickerSearchGeneric('', 1);
     setTimeout(() => pickerSearchInput.focus({ preventScroll: true }), 350);
   }
   function closePicker(){
@@ -2058,6 +2066,7 @@
   function renderPickerGrid(list){
     if (!list || !list.length){
       pickerGrid.innerHTML = `<div class="picker-state">No titles turned up. Try a different search.</div>`;
+      pickerPaginationEl.innerHTML = '';
       return;
     }
     pickerGrid.innerHTML = list.map(anime => {
@@ -2118,27 +2127,62 @@
     clearTimeout(pickerSearchTimer);
     const value = pickerSearchInput.value.trim();
     pickerSearchTimer = setTimeout(() => {
-      pickerSearchGeneric(value);
+      pickerSearchGeneric(value, 1);
     }, 450);
   });
 
   let pickerSearchToken = 0;
-  async function pickerSearchGeneric(query){
+  async function pickerSearchGeneric(query, page){
     const token = ++pickerSearchToken;
+    picker.query = query;
+    picker.page = page;
     pickerGrid.innerHTML = `<div class="picker-state">Searching…</div>`;
+    pickerPaginationEl.innerHTML = '';
     try {
       const variables = query
-        ? { page: 1, perPage: 30, search: query, sort: ['SEARCH_MATCH'] }
-        : { page: 1, perPage: 40, sort: ['POPULARITY_DESC'] };
+        ? { page, perPage: 18, search: query, sort: ['SEARCH_MATCH'] }
+        : { page, perPage: 18, sort: ['POPULARITY_DESC'] };
       const data = await gqlFetch(LIST_QUERY, variables);
       if (token !== pickerSearchToken) return;
       picker.items = data.Page?.media || [];
+      picker.lastPage = data.Page?.pageInfo?.lastPage || 1;
       renderPickerGrid(picker.items);
+      renderPickerPagination();
     } catch(err){
       if (token !== pickerSearchToken) return;
       console.error(err);
       pickerGrid.innerHTML = `<div class="picker-state">Couldn't load titles right now. Please try again.</div>`;
     }
+  }
+
+  function renderPickerPagination(){
+    const { page, lastPage } = picker;
+    if (lastPage <= 1){ pickerPaginationEl.innerHTML = ''; return; }
+
+    const pages = new Set([1, lastPage, page, page - 1, page + 1]);
+    const sorted = [...pages].filter(p => p >= 1 && p <= lastPage).sort((a,b) => a-b);
+
+    let html = `<button class="page-btn" id="pickerPrevPage" ${page <= 1 ? 'disabled' : ''} aria-label="Previous page">‹</button>`;
+    let prev = 0;
+    for (const p of sorted){
+      if (prev && p - prev > 1) html += `<span class="page-ellipsis">···</span>`;
+      html += `<button class="page-btn ${p === page ? 'active' : ''}" data-picker-page="${p}">${p}</button>`;
+      prev = p;
+    }
+    html += `<button class="page-btn" id="pickerNextPage" ${page >= lastPage ? 'disabled' : ''} aria-label="Next page">›</button>`;
+    pickerPaginationEl.innerHTML = html;
+
+    pickerPaginationEl.querySelectorAll('[data-picker-page]').forEach(btn => {
+      btn.addEventListener('click', () => goToPickerPage(Number(btn.dataset.pickerPage)));
+    });
+    document.getElementById('pickerPrevPage')?.addEventListener('click', () => goToPickerPage(page - 1));
+    document.getElementById('pickerNextPage')?.addEventListener('click', () => goToPickerPage(page + 1));
+  }
+
+  function goToPickerPage(p){
+    if (p < 1 || p === picker.page || p > picker.lastPage) return;
+    pickerSearchGeneric(picker.query, p);
+    pickerGrid.closest('.picker-body')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   // ---- Notes step ----
