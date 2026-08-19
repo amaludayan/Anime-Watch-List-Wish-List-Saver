@@ -277,7 +277,7 @@
     position:relative; z-index:4;
   }
   .pct-num{
-    font-size:22px; font-weight:400; letter-spacing:.05em;
+    font-size:22px; font-weight:700; letter-spacing:.05em;
     color:var(--paper);
     text-align:center;
     font-variant-numeric:tabular-nums;
@@ -287,16 +287,31 @@
     color:var(--ink-text-dim);
   }
 
+  /* frame rectangle below the percentage */
+  .pct-frame{
+    margin-top:14px;
+    width:150px; height:26px;
+    border:1.5px solid rgba(207,192,163,.55);
+    border-radius:2px;
+    position:relative; z-index:4;
+  }
+  .pct-frame::before,.pct-frame::after{
+    content:""; position:absolute; top:-4px; width:6px; height:6px;
+    border-top:1.5px solid rgba(169,232,207,.8);
+  }
+  .pct-frame::before{ left:-1px; border-left:1.5px solid rgba(169,232,207,.8); }
+  .pct-frame::after{ right:-1px; border-right:1.5px solid rgba(169,232,207,.8); }
+
   /* big outline site-name glyph, spans from behind the emblem down to the dot grid */
   .site-glyph{
     position:absolute;
-    left:50%; top:56px;
+    left:50%; top:40px;
     transform:translateX(-50%);
     width:100%;
-    height:296px;
+    height:340px;
     display:flex; align-items:flex-start; justify-content:center;
     font-family:var(--font-display);
-    font-size:clamp(140px,22vw,240px);
+    font-size:clamp(160px,26vw,280px);
     line-height:1;
     color:transparent;
     -webkit-text-stroke:1px rgba(255,255,255,.8);
@@ -309,14 +324,31 @@
   }
 
   .dot-grid{
-    margin-top:22px;
-    display:grid; grid-template-columns:repeat(3,7px); gap:5px;
+    margin-top:18px;
+    display:grid;
+    grid-template-columns:repeat(2,15px);
+    grid-template-rows:repeat(2,15px);
+    grid-template-areas:
+      "tl tr"
+      "bl br";
+    gap:8px;
     position:relative; z-index:4;
   }
   .dot-grid span{
-    width:7px; height:7px; border:1px solid rgba(207,192,163,.55);
+    width:15px; height:15px;
+    border:2px solid rgba(207,192,163,.55);
+    border-radius:4px;
+    transition:background .2s ease, border-color .2s ease, box-shadow .2s ease;
   }
-  .dot-grid span:nth-child(odd){ background:rgba(207,192,163,.15); }
+  .dot-grid span.dg-tl{ grid-area:tl; }
+  .dot-grid span.dg-tr{ grid-area:tr; }
+  .dot-grid span.dg-br{ grid-area:br; }
+  .dot-grid span.dg-bl{ grid-area:bl; }
+  .dot-grid span.active{
+    background:#fff;
+    border-color:#fff;
+    box-shadow:0 0 10px rgba(255,255,255,.85), 0 0 2px rgba(255,255,255,.9);
+  }
 
   .baseline-glyphs{
     margin-top:16px;
@@ -1617,10 +1649,11 @@
       <span class="pct-label">Loading Archive</span>
     </div>
 
-    <div class="dot-grid">
-      <span></span><span></span><span></span>
-      <span></span><span></span><span></span>
-      <span></span><span></span><span></span>
+    <div class="pct-frame"></div>
+
+    <div class="dot-grid" id="dotGrid">
+      <span class="dg-tl"></span><span class="dg-tr"></span>
+      <span class="dg-bl"></span><span class="dg-br"></span>
     </div>
 
     <div class="baseline-glyphs">
@@ -2366,28 +2399,44 @@
   const pctEl = document.getElementById('pctNum');
   const introEl = document.getElementById('intro');
   const appEl = document.getElementById('app');
+  const dotGridEl = document.getElementById('dotGrid');
+  const dgEls = dotGridEl ? Array.from(dotGridEl.querySelectorAll('span')) : [];
+  // DOM order is tl, tr, bl, br — reorder to clockwise sequence: tl -> tr -> br -> bl
+  const dgClockwise = [dgEls[0], dgEls[1], dgEls[3], dgEls[2]].filter(Boolean);
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function setActiveDot(index){
+    dgClockwise.forEach((el, i) => {
+      if (!el) return;
+      el.classList.toggle('active', i === index);
+    });
+  }
 
   function runIntro(){
     if (reduceMotion){
       pctEl.textContent = '100%';
+      dgClockwise.forEach(el => el && el.classList.add('active'));
       finishIntro();
       return;
     }
     const duration = 2600; // ms
+    const dotInterval = 220; // ms per clockwise step
     const start = performance.now();
     function tick(now){
-      const t = Math.min(1, (now - start) / duration);
+      const elapsed = now - start;
+      const t = Math.min(1, elapsed / duration);
       // ease-out-ish curve, with a little settle near the end
       const eased = t < 0.85
         ? t / 0.85 * 0.94
         : 0.94 + (t - 0.85) / 0.15 * 0.06;
       const pct = Math.round(eased * 100);
       pctEl.textContent = pct + '%';
+      setActiveDot(Math.floor(elapsed / dotInterval) % 4);
       if (t < 1){
         requestAnimationFrame(tick);
       } else {
         pctEl.textContent = '100%';
+        dgClockwise.forEach(el => el && el.classList.add('active'));
         setTimeout(finishIntro, 320);
       }
     }
