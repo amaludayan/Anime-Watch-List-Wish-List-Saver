@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>KŌROKU 行録 — Anime Tracker</title>
+<meta name="description" content="KŌROKU — track what you're watching, keep what you want to.">
+<meta name="theme-color" content="#0B0C0D">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<style>
+  :root{
+    /* ---- KŌROKU token system ---- */
+    --ink-0:#0a0b0c;        /* charcoal black, deepest ground */
+    --ink-1:#121417;        /* dark slate, panels */
+    --ink-2:#1b1e22;        /* dark slate, raised */
+    --line-1:#2a2e33;       /* hairline on dark */
+    --sandal-0:#cdb79a;     /* warm sandalwood */
+    --sandal-1:#e7dac4;     /* pale sandal (light-mode ground) */
+    --paper:#f6f2ea;        /* crisp warm white */
+    --jade-0:#2f6f56;       /* deep jade */
+    --jade-1:#5fb894;       /* jade glow */
+    --jade-2:#a9e8cf;       /* jade highlight */
+    --ink-text:#e9e4da;     /* body text on dark */
+    --ink-text-dim:#8b8d90;
+    --font-display:'Shippori Mincho', serif;
+    --font-body:'Noto Sans JP','Inter',system-ui,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+
+  html.light{
+    --ink-0:var(--paper);
+    --ink-1:#efe8db;
+    --ink-2:#e5dbc9;
+    --line-1:#d8cbb2;
+    --ink-text:#242220;
+    --ink-text-dim:#847d6f;
+  }
+
+  *{ -webkit-tap-highlight-color: transparent; }
+  html,body{
+    background:var(--ink-0);
+    color:var(--ink-text);
+    font-family:var(--font-body);
+    overscroll-behavior:none;
+    height:100%;
+    transition:background .5s ease, color .5s ease;
+  }
+  body{ margin:0; }
+
+  ::selection{ background:var(--jade-1); color:var(--ink-0); }
+
+  .font-display{ font-family:var(--font-display); }
+  .font-mono{ font-family:var(--font-mono); }
+
+  /* ============ INTRO ============ */
+  #intro{
+    position:fixed; inset:0; z-index:100;
+    background:var(--ink-0);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  #intro.fade-out{
+    animation:introOut .9s cubic-bezier(.65,0,.35,1) forwards;
+  }
+  @keyframes introOut{
+    0%{ opacity:1; filter:blur(0px); }
+    100%{ opacity:0; filter:blur(6px); pointer-events:none; }
+  }
+
+  .vignette{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse at 50% 45%, rgba(95,184,148,0.10), transparent 55%),
+      radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.65) 78%);
+    pointer-events:none;
+  }
+
+  /* faint architectural glyph wings, mirrored */
+  .glyph-wing{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:min(38vw,520px); height:auto;
+    opacity:.16;
+    stroke:var(--sandal-0);
+  }
+  .glyph-wing.left{ left:2%; }
+  .glyph-wing.right{ right:2%; transform:translateY(-50%) scaleX(-1); }
+
+  .center-hair{
+    position:absolute; left:50%; top:0; bottom:0; width:1px;
+    background:linear-gradient(to bottom, transparent 0%, rgba(207,192,163,.35) 20%, rgba(207,192,163,.35) 80%, transparent 100%);
+    transform:translateX(-50%);
+  }
+
+  .intro-stack{
+    position:relative; display:flex; flex-direction:column; align-items:center;
+    gap:18px; z-index:2;
+  }
+
+  .rune-top{
+    writing-mode:vertical-rl;
+    font-family:var(--font-display);
+    letter-spacing:.4em;
+    font-size:13px;
+    color:var(--sandal-0);
+    opacity:.55;
+    margin-bottom:26px;
+    animation:runeFlicker 4s ease-in-out infinite;
+  }
+  @keyframes runeFlicker{
+    0%,100%{ opacity:.55 } 50%{ opacity:.85 }
+  }
+
+  /* jade band */
+  .jade-band{
+    position:relative;
+    width:min(92vw,760px);
+    height:64px;
+    overflow:hidden;
+    border-top:1px solid rgba(169,232,207,.25);
+    border-bottom:1px solid rgba(169,232,207,.25);
+  }
+  .jade-band::before{
+    content:"";
+    position:absolute; inset:-40% -10%;
+    background:
+      radial-gradient(closest-side at 20% 40%, rgba(95,184,148,.55), transparent 60%),
+      radial-gradient(closest-side at 65% 60%, rgba(47,111,86,.6), transparent 55%),
+      radial-gradient(closest-side at 85% 30%, rgba(169,232,207,.4), transparent 55%),
+      linear-gradient(120deg, #123028, #1f5442 30%, #0d2620 55%, #2c6b53 75%, #0f2b23);
+    filter:blur(6px) saturate(1.15);
+    animation:marble 14s linear infinite alternate;
+  }
+  @keyframes marble{
+    0%{ transform:translate(-4%,-2%) rotate(0deg) scale(1.05); }
+    100%{ transform:translate(4%,3%) rotate(1.2deg) scale(1.12); }
+  }
+  .jade-band .lattice{
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.035) 0 1px, transparent 1px 46px);
+    mix-blend-mode:overlay;
+  }
+  .jade-mark{
+    position:absolute; left:50%; top:50%;
+    width:34px; height:34px;
+    transform:translate(-50%,-50%);
+    border:1px solid rgba(230,230,220,.55);
+    outline:1px solid rgba(230,230,220,.55);
+    outline-offset:3px;
+    background:rgba(15,20,18,.4);
+    display:grid; place-items:center;
+  }
+  .jade-mark::before{ content:"卍"; font-size:14px; color:var(--paper); opacity:.7; font-family:var(--font-display); }
+  .jade-mark.left-mark{ left:14%; width:26px; height:26px; }
+  .jade-mark.right-mark{ left:86%; width:26px; height:26px; }
+
+  /* emblem */
+  .emblem-wrap{
+    position:relative; margin-top:-46px; z-index:3;
+    width:150px; height:150px;
+    display:flex; align-items:center; justify-content:center;
+    filter:drop-shadow(0 0 18px rgba(169,232,207,.55)) drop-shadow(0 0 40px rgba(95,184,148,.25));
+  }
+  .emblem-wrap svg{ width:100%; height:100%; }
+  .emblem-path{
+    fill:none;
+    stroke:var(--paper);
+    stroke-width:2.4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    stroke-dasharray:900;
+    stroke-dashoffset:900;
+    animation:drawEmblem 2.6s cubic-bezier(.3,.6,.2,1) forwards .15s, emberGlow 2.4s ease-in-out infinite 2.4s;
+  }
+  @keyframes drawEmblem{ to{ stroke-dashoffset:0; } }
+  @keyframes emberGlow{
+    0%,100%{ filter:drop-shadow(0 0 2px rgba(169,232,207,.4)); }
+    50%{ filter:drop-shadow(0 0 10px rgba(169,232,207,.9)); }
+  }
+
+  .pct-row{
+    margin-top:10px;
+    display:flex; align-items:baseline; gap:10px;
+    font-family:var(--font-mono);
+  }
+  .pct-num{
+    font-size:22px; font-weight:400; letter-spacing:.05em;
+    color:var(--paper);
+    min-width:64px; text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+  .pct-label{
+    font-size:10px; letter-spacing:.35em; text-transform:uppercase;
+    color:var(--ink-text-dim);
+  }
+
+  .dot-grid{
+    margin-top:22px;
+    display:grid; grid-template-columns:repeat(3,7px); gap:5px;
+  }
+  .dot-grid span{
+    width:7px; height:7px; border:1px solid rgba(207,192,163,.55);
+  }
+  .dot-grid span:nth-child(odd){ background:rgba(207,192,163,.15); }
+
+  .baseline-glyphs{
+    margin-top:16px;
+    font-family:var(--font-mono);
+    font-size:10px; letter-spacing:.15em;
+    color:var(--ink-text-dim);
+    display:flex; align-items:center; gap:8px;
+  }
+  .baseline-glyphs .spark{ color:#b8544a; font-size:8px; }
+
+  .side-text{
+    position:absolute;
+    writing-mode:vertical-rl;
+    font-family:var(--font-display);
+    font-size:11px; letter-spacing:.3em;
+    color:var(--ink-text-dim);
+    opacity:.5;
+  }
+  .side-text.tl{ top:12%; left:6%; }
+  .side-text.br{ bottom:8%; right:6%; }
+
+  @media (max-width:640px){
+    .jade-band{ height:48px; }
+    .emblem-wrap{ width:110px; height:110px; margin-top:-34px; }
+    .glyph-wing{ opacity:.09; }
+    .side-text{ display:none; }
+  }
+
+  /* ============ APP SHELL ============ */
+  #app{
+    opacity:0;
+    min-height:100dvh;
+    display:flex; flex-direction:column;
+    transition:opacity .8s ease .1s;
+  }
+  #app.visible{ opacity:1; }
+
+  header.app-header{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px;
+    padding-top:calc(14px + env(safe-area-inset-top));
+    background:color-mix(in srgb, var(--ink-0) 88%, transparent);
+    backdrop-filter:blur(14px) saturate(1.1);
+    border-bottom:1px solid var(--line-1);
+  }
+  .icon-btn{
+    width:40px; height:40px;
+    display:grid; place-items:center;
+    border:1px solid var(--line-1);
+    background:var(--ink-1);
+    color:var(--ink-text);
+    transition:border-color .25s ease, background .25s ease, transform .15s ease;
+  }
+  .icon-btn:hover{ border-color:var(--jade-1); }
+  .icon-btn:active{ transform:scale(.94); }
+  .icon-btn svg{ width:18px; height:18px; stroke-width:1.5; }
+
+  .brand{
+    display:flex; flex-direction:column; align-items:center; line-height:1;
+  }
+  .brand .cn{
+    font-family:var(--font-display);
+    font-size:12px; letter-spacing:.5em;
+    color:var(--jade-1);
+    margin-bottom:4px;
+  }
+  .brand .en{
+    font-family:var(--font-display);
+    font-size:19px; letter-spacing:.32em;
+    color:var(--ink-text);
+  }
+
+  .header-right{ display:flex; align-items:center; gap:8px; }
+
+  main.app-main{
+    flex:1;
+    display:flex; align-items:center; justify-content:center;
+    padding:40px 20px 80px;
+  }
+  .empty-state{
+    text-align:center; max-width:420px;
+  }
+  .empty-state .mark{
+    width:56px; height:56px; margin:0 auto 22px;
+    border:1px solid var(--line-1);
+    display:grid; place-items:center;
+    color:var(--jade-1);
+  }
+  .empty-state h2{
+    font-family:var(--font-display);
+    font-size:22px; letter-spacing:.08em;
+    margin-bottom:10px;
+  }
+  .empty-state p{
+    font-size:13.5px; color:var(--ink-text-dim); line-height:1.7;
+  }
+  .empty-state .cta{
+    margin-top:26px;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:11px 24px;
+    border:1px solid var(--jade-1);
+    color:var(--jade-2);
+    font-size:12.5px; letter-spacing:.12em;
+    background:transparent;
+    cursor:pointer;
+    transition:background .25s ease, color .25s ease;
+  }
+  .empty-state .cta:hover{ background:var(--jade-0); color:var(--paper); }
+
+  /* genre / menu drawers */
+  .drawer{
+    position:fixed; top:0; bottom:0; width:min(84vw,320px);
+    background:var(--ink-1);
+    border-right:1px solid var(--line-1);
+    z-index:40;
+    padding:calc(20px + env(safe-area-inset-top)) 22px 20px;
+    transition:transform .45s cubic-bezier(.2,.8,.2,1);
+    overflow-y:auto;
+  }
+  #genreDrawer{ left:0; transform:translateX(-105%); border-right:1px solid var(--line-1); border-left:none;}
+  #genreDrawer.open{ transform:translateX(0); }
+  #menuDrawer{ right:0; left:auto; transform:translateX(105%); border-left:1px solid var(--line-1); border-right:none; }
+  #menuDrawer.open{ transform:translateX(0); }
+
+  .drawer h3{
+    font-family:var(--font-display); letter-spacing:.2em; font-size:14px;
+    color:var(--ink-text-dim); margin-bottom:18px;
+    padding-bottom:12px; border-bottom:1px solid var(--line-1);
+  }
+  .drawer ul{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:2px; }
+  .drawer li a{
+    display:block; padding:11px 4px;
+    font-size:14px; color:var(--ink-text);
+    border-bottom:1px solid var(--line-1);
+    text-decoration:none;
+    transition:color .2s ease, padding-left .2s ease;
+  }
+  .drawer li a:hover{ color:var(--jade-1); padding-left:8px; }
+
+  .scrim{
+    position:fixed; inset:0; background:rgba(0,0,0,.55);
+    backdrop-filter:blur(2px);
+    z-index:30; opacity:0; pointer-events:none;
+    transition:opacity .35s ease;
+  }
+  .scrim.show{ opacity:1; pointer-events:auto; }
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ INTRO SEQUENCE ============ -->
+<div id="intro" role="status" aria-live="polite" aria-label="Loading KŌROKU">
+  <div class="vignette"></div>
+  <div class="center-hair"></div>
+
+  <svg class="glyph-wing left" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <path d="M40 40 h60 v40 M100 60 v60 h50 M60 160 h120 M90 200 v90 M40 260 h200 M150 260 v140 M60 340 h60 v60 h-60z M180 360 h50 v70" stroke-width="1"/>
+    <circle cx="220" cy="120" r="18" stroke-width="1"/>
+  </svg>
+  <svg class="glyph-wing right" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg" fill="none">
+    <path d="M40 40 h60 v40 M100 60 v60 h50 M60 160 h120 M90 200 v90 M40 260 h200 M150 260 v140 M60 340 h60 v60 h-60z M180 360 h50 v70" stroke-width="1"/>
+    <circle cx="220" cy="120" r="18" stroke-width="1"/>
+  </svg>
+
+  <span class="side-text tl">記憶を辿る</span>
+  <span class="side-text br">尋 · 録 · 憶</span>
+
+  <div class="intro-stack">
+    <div class="rune-top">行録・起動中</div>
+
+    <div class="jade-band">
+      <div class="lattice"></div>
+      <span class="jade-mark left-mark"></span>
+      <span class="jade-mark right-mark"></span>
+    </div>
+
+    <div class="emblem-wrap">
+      <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+        <path class="emblem-path" d="M60 6 C 60 26 50 34 44 40 C 30 54 24 70 30 90 C 34 104 46 112 46 112 C 40 96 42 82 52 72 C 58 66 62 60 62 50
+          M60 6 C 60 26 70 34 76 40 C 90 54 96 70 90 90 C 86 104 74 112 74 112 C 80 96 78 82 68 72 C 62 66 58 60 58 50
+          M46 112 C 40 122 34 128 24 132 M74 112 C 80 122 86 128 96 132
+          M50 40 L 46 34 M70 40 L 74 34" />
+        <circle class="emblem-path" cx="60" cy="52" r="4" style="stroke-dasharray:26; stroke-dashoffset:26; animation-delay:1.9s;"/>
+      </svg>
+    </div>
+
+    <div class="pct-row">
+      <span class="pct-num" id="pctNum">0%</span>
+      <span class="pct-label">Loading Archive</span>
+    </div>
+
+    <div class="dot-grid">
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+      <span></span><span></span><span></span>
+    </div>
+
+    <div class="baseline-glyphs">
+      <span>永遠の物語を刻む</span>
+      <span class="spark">✳</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app">
+
+  <header class="app-header">
+    <button class="icon-btn" id="genreBtn" aria-label="Browse genres" aria-controls="genreDrawer">
+      <i data-lucide="sparkles"></i>
+    </button>
+
+    <div class="brand">
+      <span class="cn">行録</span>
+      <span class="en">KŌROKU</span>
+    </div>
+
+    <div class="header-right">
+      <button class="icon-btn" id="themeBtn" aria-label="Toggle light and dark mode">
+        <i data-lucide="moon"></i>
+      </button>
+      <button class="icon-btn" id="menuBtn" aria-label="Open menu" aria-controls="menuDrawer">
+        <i data-lucide="menu"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <div class="empty-state">
+      <div class="mark"><i data-lucide="scroll-text"></i></div>
+      <h2>Your archive is quiet, for now</h2>
+      <p>Track the series you're watching, and keep a list of everything you mean to start. Every title you add becomes part of your record.</p>
+      <button class="cta"><i data-lucide="plus" style="width:14px;height:14px;"></i> Add your first title</button>
+    </div>
+  </main>
+
+</div>
+
+<!-- Drawers -->
+<div class="scrim" id="scrim"></div>
+
+<aside class="drawer" id="genreDrawer" aria-label="Genres">
+  <h3>ジャンル · Genres</h3>
+  <ul>
+    <li><a href="#">Action</a></li>
+    <li><a href="#">Fantasy</a></li>
+    <li><a href="#">Slice of Life</a></li>
+    <li><a href="#">Romance</a></li>
+    <li><a href="#">Mystery</a></li>
+    <li><a href="#">Sci-Fi</a></li>
+    <li><a href="#">Horror</a></li>
+    <li><a href="#">Sports</a></li>
+  </ul>
+</aside>
+
+<aside class="drawer" id="menuDrawer" aria-label="Menu">
+  <h3>目録 · Menu</h3>
+  <ul>
+    <li><a href="#">Watching</a></li>
+    <li><a href="#">Wish List</a></li>
+    <li><a href="#">Completed</a></li>
+    <li><a href="#">History</a></li>
+    <li><a href="#">Settings</a></li>
+    <li><a href="#">About KŌROKU</a></li>
+  </ul>
+</aside>
+
+<script>
+  // ---- Lucide icons ----
+  lucide.createIcons();
+
+  // ---- Theme toggle ----
+  const root = document.documentElement;
+  const themeBtn = document.getElementById('themeBtn');
+  const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  const saved = localStorage.getItem('koroku-theme');
+  if (saved ? saved === 'light' : prefersLight){
+    root.classList.add('light');
+  }
+  function refreshThemeIcon(){
+    themeBtn.innerHTML = root.classList.contains('light')
+      ? '<i data-lucide="moon"></i>'
+      : '<i data-lucide="sun"></i>';
+    lucide.createIcons();
+  }
+  refreshThemeIcon();
+  themeBtn.addEventListener('click', () => {
+    root.classList.toggle('light');
+    localStorage.setItem('koroku-theme', root.classList.contains('light') ? 'light' : 'dark');
+    refreshThemeIcon();
+  });
+
+  // ---- Drawers ----
+  const genreDrawer = document.getElementById('genreDrawer');
+  const menuDrawer = document.getElementById('menuDrawer');
+  const scrim = document.getElementById('scrim');
+
+  function openDrawer(d){ d.classList.add('open'); scrim.classList.add('show'); }
+  function closeDrawers(){
+    genreDrawer.classList.remove('open');
+    menuDrawer.classList.remove('open');
+    scrim.classList.remove('show');
+  }
+  document.getElementById('genreBtn').addEventListener('click', () => openDrawer(genreDrawer));
+  document.getElementById('menuBtn').addEventListener('click', () => openDrawer(menuDrawer));
+  scrim.addEventListener('click', closeDrawers);
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeDrawers(); });
+
+  // ---- Intro sequence: 0% -> 100% then fade ----
+  const pctEl = document.getElementById('pctNum');
+  const introEl = document.getElementById('intro');
+  const appEl = document.getElementById('app');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function runIntro(){
+    if (reduceMotion){
+      pctEl.textContent = '100%';
+      finishIntro();
+      return;
+    }
+    const duration = 2600; // ms
+    const start = performance.now();
+    function tick(now){
+      const t = Math.min(1, (now - start) / duration);
+      // ease-out-ish curve, with a little settle near the end
+      const eased = t < 0.85
+        ? t / 0.85 * 0.94
+        : 0.94 + (t - 0.85) / 0.15 * 0.06;
+      const pct = Math.round(eased * 100);
+      pctEl.textContent = pct + '%';
+      if (t < 1){
+        requestAnimationFrame(tick);
+      } else {
+        pctEl.textContent = '100%';
+        setTimeout(finishIntro, 320);
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function finishIntro(){
+    introEl.classList.add('fade-out');
+    appEl.classList.add('visible');
+    setTimeout(() => { introEl.style.display = 'none'; }, 950);
+  }
+
+  window.addEventListener('load', runIntro);
+</script>
+
+</body>
+</html>
