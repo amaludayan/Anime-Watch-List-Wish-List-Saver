@@ -1906,8 +1906,8 @@
       <span id="listviewEditCount">0 items</span>
       <button class="lv-clearall-btn" id="listviewClearAllBtn" type="button">Clear All</button>
     </div>
-    <div class="subpanel-scroll">
-      <div class="listview-items" id="listviewItems"></div>
+    <div class="subpanel-scroll shelf-scroll" id="listviewScroll">
+      <div id="listviewRows"></div>
     </div>
   </div>
 </div>
@@ -2897,248 +2897,160 @@
     updateSettingsStats();
   }
 
-  // ---- Watched List view (with Edit / delete mode) ----
-  const listviewBackdrop = document.getElementById('listviewBackdrop');
-  const listviewClose = document.getElementById('listviewClose');
-  const listviewItems = document.getElementById('listviewItems');
-  const listviewEditToggle = document.getElementById('listviewEditToggle');
-  const listviewEditLabel = document.getElementById('listviewEditLabel');
-  const listviewClearBar = document.getElementById('listviewClearBar');
-  const listviewEditCount = document.getElementById('listviewEditCount');
-  const listviewClearAllBtn = document.getElementById('listviewClearAllBtn');
-  let listviewEditing = false;
-
-  function openListView(){
-    listviewEditing = false;
-    updateListviewEditUI();
-    renderListView();
-    closeDrawers();
-    lockScroll();
-    listviewBackdrop.classList.remove('closing');
-    void listviewBackdrop.offsetHeight;
-    requestAnimationFrame(() => requestAnimationFrame(() => listviewBackdrop.classList.add('open')));
-  }
-  function closeListView(){
-    listviewBackdrop.classList.remove('open');
-    unlockScroll();
-  }
-  listviewClose.addEventListener('click', closeListView);
-  listviewBackdrop.addEventListener('click', e => { if (e.target === listviewBackdrop) closeListView(); });
-
-  function updateListviewEditUI(){
-    listviewEditToggle.classList.toggle('active', listviewEditing);
-    listviewEditLabel.textContent = listviewEditing ? 'Done' : 'Edit';
-    const count = Object.keys(lists.watched || {}).length;
-    listviewClearBar.classList.toggle('show', listviewEditing && count > 0);
-    listviewEditCount.textContent = `${count} item${count === 1 ? '' : 's'}`;
-  }
-  listviewEditToggle.addEventListener('click', () => {
-    listviewEditing = !listviewEditing;
-    updateListviewEditUI();
-    renderListView();
-  });
-  listviewClearAllBtn.addEventListener('click', () => {
-    const count = Object.keys(lists.watched || {}).length;
-    if (!count) return;
-    if (!confirm(`Remove all ${count} title${count === 1 ? '' : 's'} from your Watched List? This can't be undone.`)) return;
-    lists.watched = {};
-    saveLists(lists);
-    refreshInListMarkers();
-    updateListviewEditUI();
-    renderListView();
-    showToast('Watched List cleared');
-  });
-
-  function renderListView(){
-    const entries = Object.values(lists.watched || {}).sort((a,b) => b.addedAt - a.addedAt);
-    if (!entries.length){
-      listviewItems.innerHTML = `<div class="listview-empty">Nothing saved here yet. Tap the + button to add titles.</div>`;
-      return;
-    }
-    listviewItems.innerHTML = entries.map(e => {
-      const meta = [formatLabel(e.format), e.year, e.score ? `★ ${e.score}` : null].filter(Boolean).join(' · ');
-      return `
-        <div class="listview-card ${listviewEditing ? 'editing-mode' : ''}" data-id="${e.id}">
-          ${listviewEditing ? `<button class="lv-delete-badge" data-remove-id="${e.id}" aria-label="Delete"><i data-lucide="x"></i></button>` : ''}
-          <div class="lv-poster" data-open-id="${e.id}">${e.img ? `<img src="${e.img}" alt="${escapeHtml(e.title)}">` : ''}</div>
-          <div class="lv-info">
-            <h4 data-open-id="${e.id}">${escapeHtml(e.title)}</h4>
-            <div class="lv-meta">${escapeHtml(meta)}</div>
-            ${e.notes ? `<div class="lv-notes">${escapeHtml(e.notes)}</div>` : ''}
-            <div class="lv-actions">
-              <button class="lv-action-btn" data-edit-id="${e.id}" aria-label="Edit notes"><i data-lucide="pencil"></i></button>
-              <button class="lv-action-btn danger" data-remove-id="${e.id}" aria-label="Remove from list"><i data-lucide="trash-2"></i></button>
-            </div>
-          </div>
-        </div>`;
-    }).join('');
-
-    listviewItems.querySelectorAll('[data-open-id]').forEach(el => {
-      el.addEventListener('click', () => {
-        if (listviewEditing) return;
-        closeListView(); openModal(Number(el.dataset.openId));
-      });
-    });
-    listviewItems.querySelectorAll('[data-remove-id]').forEach(btn => {
-      btn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        const id = Number(btn.dataset.removeId);
-        const card = listviewItems.querySelector(`.listview-card[data-id="${id}"]`);
-        removeFromList('watched', id);
-        updateListviewEditUI();
-        showToast('Removed from Watched List');
-        if (card){
-          card.classList.add('removing');
-          setTimeout(renderListView, 220);
-        } else {
-          renderListView();
-        }
-      });
-    });
-    listviewItems.querySelectorAll('[data-edit-id]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = Number(btn.dataset.editId);
-        const entry = lists.watched[id];
-        if (!entry) return;
-        const updated = prompt('Edit your notes for "' + entry.title + '":', entry.notes || '');
-        if (updated === null) return; // cancelled
-        entry.notes = updated.trim();
-        saveLists(lists);
-        renderListView();
-      });
-    });
-    renderIcons();
-  }
-
-  document.getElementById('menuWatchedBtn').addEventListener('click', e => { e.preventDefault(); openListView(); });
-
   // ==================================================================
-  // ---- Wish List — 3D Bookshelf ----
+  // ---- 3D Bookshelf (shared by Watched List + Wish List) ----
   // ==================================================================
-  const shelfBackdrop = document.getElementById('shelfBackdrop');
-  const shelfClose = document.getElementById('shelfClose');
-  const shelfRows = document.getElementById('shelfRows');
-  const shelfEditToggle = document.getElementById('shelfEditToggle');
-  const shelfEditLabel = document.getElementById('shelfEditLabel');
-  const shelfClearBar = document.getElementById('shelfClearBar');
-  const shelfEditCount = document.getElementById('shelfEditCount');
-  const shelfClearAllBtn = document.getElementById('shelfClearAllBtn');
-  const bookOverlay = document.getElementById('bookOverlay');
   const BOOKS_PER_SHELF = 5;
+  const bookOverlay = document.getElementById('bookOverlay');
 
-  let shelfEditing = false;
-  let openBookId = null;     // currently popped/opened book id
-  let openBookStage = null;  // 'cover' | 'open'
+  let openBookListKey = null;    // 'watched' | 'wish' — which list the open book belongs to
+  let openBookId = null;         // currently popped/opened book id
+  let openBookStage = null;      // 'cover' | 'open'
   let openBookOriginRect = null; // bounding rect of the tapped shelf spine, for the pop-out origin
 
-  function openShelf(){
-    shelfEditing = false;
-    openBookId = null; openBookStage = null;
-    updateShelfEditUI();
-    renderShelf();
-    closeBookOverlay(true);
-    closeDrawers();
-    lockScroll();
-    shelfBackdrop.classList.remove('closing');
-    void shelfBackdrop.offsetHeight;
-    requestAnimationFrame(() => requestAnimationFrame(() => shelfBackdrop.classList.add('open')));
-  }
-  function closeShelf(){
-    shelfBackdrop.classList.remove('open');
-    unlockScroll();
-    closeBookOverlay(true);
-  }
-  shelfClose.addEventListener('click', closeShelf);
-  shelfBackdrop.addEventListener('click', e => { if (e.target === shelfBackdrop) closeShelf(); });
-  document.getElementById('menuWishBtn').addEventListener('click', e => { e.preventDefault(); openShelf(); });
+  const shelves = {}; // populated below by makeShelf()
 
-  function updateShelfEditUI(){
-    shelfEditToggle.classList.toggle('active', shelfEditing);
-    shelfEditLabel.textContent = shelfEditing ? 'Done' : 'Edit';
-    const count = Object.keys(lists.wish || {}).length;
-    shelfClearBar.classList.toggle('show', shelfEditing && count > 0);
-    shelfEditCount.textContent = `${count} item${count === 1 ? '' : 's'}`;
-  }
-  shelfEditToggle.addEventListener('click', () => {
-    shelfEditing = !shelfEditing;
-    closeBookOverlay(true);
-    updateShelfEditUI();
-    renderShelf();
-  });
-  shelfClearAllBtn.addEventListener('click', () => {
-    const count = Object.keys(lists.wish || {}).length;
-    if (!count) return;
-    if (!confirm(`Remove all ${count} title${count === 1 ? '' : 's'} from your Wish List shelf? This can't be undone.`)) return;
-    lists.wish = {};
-    saveLists(lists);
-    refreshInListMarkers();
-    updateShelfEditUI();
-    renderShelf();
-    showToast('Wish List cleared');
-  });
+  function makeShelf(listKey, listName, els){
+    let editing = false;
 
-  function renderShelf(){
-    const entries = Object.values(lists.wish || {}).sort((a,b) => b.addedAt - a.addedAt);
-    if (!entries.length){
-      shelfRows.innerHTML = `<div class="shelf-empty">Your shelf is empty. Tap the + button to add titles you want to watch.</div>`;
-      return;
+    function updateEditUI(){
+      els.editToggle.classList.toggle('active', editing);
+      els.editLabel.textContent = editing ? 'Done' : 'Edit';
+      const count = Object.keys(lists[listKey] || {}).length;
+      els.clearBar.classList.toggle('show', editing && count > 0);
+      els.editCount.textContent = `${count} item${count === 1 ? '' : 's'}`;
     }
-    let html = '';
-    for (let i = 0; i < entries.length; i += BOOKS_PER_SHELF){
-      const chunk = entries.slice(i, i + BOOKS_PER_SHELF);
-      html += `<div class="shelf-unit"><div class="shelf-books">`;
-      html += chunk.map((e) => {
-        return `
-          <div class="book-spine ${shelfEditing ? 'editing-mode' : ''} ${openBookId === e.id ? 'selected-for-open' : ''}" data-id="${e.id}">
-            ${shelfEditing ? `<button class="lv-delete-badge" data-remove-id="${e.id}" aria-label="Delete"><i data-lucide="x"></i></button>` : ''}
-            <div class="b-top"></div>
-            <div class="b-pages"></div>
-            <div class="b-front">
-              <span class="b-edge-glow"></span>
-              ${e.img ? `<img src="${e.img}" alt="${escapeHtml(e.title)}" loading="lazy">` : ''}
-              <span class="b-shade"></span>
-              <span class="b-title">${escapeHtml(e.title)}</span>
-            </div>
-          </div>`;
-      }).join('');
-      html += `</div><div class="shelf-plank"></div></div>`;
-    }
-    shelfRows.innerHTML = html;
 
-    shelfRows.querySelectorAll('.book-spine').forEach(spine => {
-      spine.addEventListener('click', (ev) => {
-        const id = Number(spine.dataset.id);
-        if (shelfEditing){
-          return; // taps on the spine itself do nothing in edit mode; use the badge
-        }
-        handleBookTap(id, ev);
+    function render(){
+      const entries = Object.values(lists[listKey] || {}).sort((a,b) => b.addedAt - a.addedAt);
+      if (!entries.length){
+        els.rows.innerHTML = `<div class="shelf-empty">${els.emptyText}</div>`;
+        return;
+      }
+      let html = '';
+      for (let i = 0; i < entries.length; i += BOOKS_PER_SHELF){
+        const chunk = entries.slice(i, i + BOOKS_PER_SHELF);
+        html += `<div class="shelf-unit"><div class="shelf-books">`;
+        html += chunk.map((e) => {
+          const selected = openBookListKey === listKey && openBookId === e.id;
+          return `
+            <div class="book-spine ${editing ? 'editing-mode' : ''} ${selected ? 'selected-for-open' : ''}" data-id="${e.id}">
+              ${editing ? `<button class="lv-delete-badge" data-remove-id="${e.id}" aria-label="Delete"><i data-lucide="x"></i></button>` : ''}
+              <div class="b-top"></div>
+              <div class="b-pages"></div>
+              <div class="b-front">
+                <span class="b-edge-glow"></span>
+                ${e.img ? `<img src="${e.img}" alt="${escapeHtml(e.title)}" loading="lazy">` : ''}
+                <span class="b-shade"></span>
+                <span class="b-title">${escapeHtml(e.title)}</span>
+              </div>
+            </div>`;
+        }).join('');
+        html += `</div><div class="shelf-plank"></div></div>`;
+      }
+      els.rows.innerHTML = html;
+
+      els.rows.querySelectorAll('.book-spine').forEach(spine => {
+        spine.addEventListener('click', (ev) => {
+          const id = Number(spine.dataset.id);
+          if (editing) return; // taps on the spine itself do nothing in edit mode; use the badge
+          handleBookTap(listKey, id, ev);
+        });
       });
-    });
-    shelfRows.querySelectorAll('[data-remove-id]').forEach(btn => {
-      btn.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        const id = Number(btn.dataset.removeId);
-        removeFromList('wish', id);
-        updateShelfEditUI();
-        renderShelf();
-        showToast('Removed from Wish List');
+      els.rows.querySelectorAll('[data-remove-id]').forEach(btn => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const id = Number(btn.dataset.removeId);
+          removeFromList(listKey, id);
+          updateEditUI();
+          render();
+          showToast(`Removed from ${listName}`);
+        });
       });
+      renderIcons();
+    }
+
+    function open(){
+      editing = false;
+      updateEditUI();
+      render();
+      closeDrawers();
+      lockScroll();
+      els.backdrop.classList.remove('closing');
+      void els.backdrop.offsetHeight;
+      requestAnimationFrame(() => requestAnimationFrame(() => els.backdrop.classList.add('open')));
+    }
+    function close(){
+      els.backdrop.classList.remove('open');
+      unlockScroll();
+    }
+
+    els.close.addEventListener('click', close);
+    els.backdrop.addEventListener('click', e => { if (e.target === els.backdrop) close(); });
+    els.editToggle.addEventListener('click', () => {
+      editing = !editing;
+      if (openBookListKey === listKey) closeBookOverlay(true);
+      updateEditUI();
+      render();
     });
-    renderIcons();
+    els.clearAllBtn.addEventListener('click', () => {
+      const count = Object.keys(lists[listKey] || {}).length;
+      if (!count) return;
+      if (!confirm(`Remove all ${count} title${count === 1 ? '' : 's'} from your ${listName}? This can't be undone.`)) return;
+      lists[listKey] = {};
+      saveLists(lists);
+      refreshInListMarkers();
+      updateEditUI();
+      render();
+      showToast(`${listName} cleared`);
+    });
+
+    const shelf = { listKey, listName, render, open, close };
+    shelves[listKey] = shelf;
+    return shelf;
   }
 
-  function handleBookTap(id, ev){
-    if (openBookId === id && openBookStage === 'cover'){
+  // ---- Watched List shelf ----
+  const watchedShelf = makeShelf('watched', 'Watched List', {
+    backdrop: document.getElementById('listviewBackdrop'),
+    close: document.getElementById('listviewClose'),
+    rows: document.getElementById('listviewRows'),
+    editToggle: document.getElementById('listviewEditToggle'),
+    editLabel: document.getElementById('listviewEditLabel'),
+    clearBar: document.getElementById('listviewClearBar'),
+    editCount: document.getElementById('listviewEditCount'),
+    clearAllBtn: document.getElementById('listviewClearAllBtn'),
+    emptyText: 'Nothing saved here yet. Tap the + button to add titles.'
+  });
+  document.getElementById('menuWatchedBtn').addEventListener('click', e => { e.preventDefault(); watchedShelf.open(); });
+
+  // ---- Wish List shelf ----
+  const wishShelf = makeShelf('wish', 'Wish List', {
+    backdrop: document.getElementById('shelfBackdrop'),
+    close: document.getElementById('shelfClose'),
+    rows: document.getElementById('shelfRows'),
+    editToggle: document.getElementById('shelfEditToggle'),
+    editLabel: document.getElementById('shelfEditLabel'),
+    clearBar: document.getElementById('shelfClearBar'),
+    editCount: document.getElementById('shelfEditCount'),
+    clearAllBtn: document.getElementById('shelfClearAllBtn'),
+    emptyText: 'Your shelf is empty. Tap the + button to add titles you want to watch.'
+  });
+  document.getElementById('menuWishBtn').addEventListener('click', e => { e.preventDefault(); wishShelf.open(); });
+
+  function handleBookTap(listKey, id, ev){
+    if (openBookListKey === listKey && openBookId === id && openBookStage === 'cover'){
       openBookStage = 'open';
       openBookPages();
-    } else if (openBookId === id && openBookStage === 'open'){
+    } else if (openBookListKey === listKey && openBookId === id && openBookStage === 'open'){
       // already fully open — ignore taps on the spine behind the overlay
     } else {
+      openBookListKey = listKey;
       openBookId = id;
       openBookStage = 'cover';
       const spineEl = ev && ev.currentTarget;
       openBookOriginRect = spineEl ? spineEl.getBoundingClientRect() : null;
-      renderShelf();
+      shelves[listKey].render();
       mountBookScene();
     }
   }
@@ -3151,12 +3063,13 @@
   // shelf modal, etc.) where an animation would just be in the way.
   function closeBookOverlay(instant){
     const scene = document.getElementById('bookPop');
+    const listKey = openBookListKey;
 
     const hardClose = () => {
-      openBookId = null; openBookStage = null; openBookOriginRect = null;
+      openBookListKey = null; openBookId = null; openBookStage = null; openBookOriginRect = null;
       bookOverlay.classList.remove('show');
       bookOverlay.innerHTML = '';
-      renderShelf();
+      if (listKey && shelves[listKey]) shelves[listKey].render();
     };
 
     if (instant || !scene || !bookOverlay.classList.contains('show')){
@@ -3167,9 +3080,9 @@
     const wasOpen = scene.classList.contains('stage-open');
 
     const flyBackAndCleanup = () => {
-      openBookId = null; openBookStage = null; openBookOriginRect = null;
+      openBookListKey = null; openBookId = null; openBookStage = null; openBookOriginRect = null;
       bookOverlay.classList.remove('show'); // triggers the fly-back-to-shelf transition
-      setTimeout(() => { bookOverlay.innerHTML = ''; renderShelf(); }, 650);
+      setTimeout(() => { bookOverlay.innerHTML = ''; if (listKey && shelves[listKey]) shelves[listKey].render(); }, 650);
     };
 
     if (wasOpen){
@@ -3187,7 +3100,7 @@
   // wherever it actually sits on the shelf. Re-used afterwards for the
   // open/close hinge transition instead of being torn down and rebuilt.
   function mountBookScene(){
-    const entry = lists.wish[openBookId];
+    const entry = lists[openBookListKey] ? lists[openBookListKey][openBookId] : null;
     if (!entry){ closeBookOverlay(true); return; }
     const meta = [formatLabel(entry.format), entry.year, entry.score ? `★ ${entry.score}` : null].filter(Boolean).join(' · ');
 
@@ -3275,7 +3188,7 @@
 
   function attachBookSceneListeners(entry){
     document.getElementById('bookCoverFace').addEventListener('click', () => {
-      if (openBookStage === 'cover') handleBookTap(openBookId);
+      if (openBookStage === 'cover') handleBookTap(openBookListKey, openBookId);
     });
     document.getElementById('bookOverlayClose').addEventListener('click', () => closeBookOverlay());
     document.getElementById('bookBackBtn').addEventListener('click', () => closeBookOverlay());
@@ -3294,7 +3207,9 @@
     });
     document.getElementById('bookFullRecordBtn').addEventListener('click', () => {
       const id = entry.id;
-      closeShelf();
+      const listKey = openBookListKey;
+      if (listKey && shelves[listKey]) shelves[listKey].close();
+      closeBookOverlay(true);
       openModal(id);
     });
   }
