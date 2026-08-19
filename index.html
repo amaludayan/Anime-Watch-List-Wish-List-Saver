@@ -2882,12 +2882,44 @@
     }
   }
 
+  // Closing the reader plays it in reverse of how it opened: first the cover
+  // swings shut and the book shrinks back down to its "closed" size (still
+  // centred), then the whole closed book flies back down onto the shelf
+  // spine it came from, mirroring the fly-out on open. `instant` skips all
+  // of that for internal teardown paths (switching books, closing the whole
+  // shelf modal, etc.) where an animation would just be in the way.
   function closeBookOverlay(instant){
-    openBookId = null; openBookStage = null; openBookOriginRect = null;
-    bookOverlay.classList.remove('show');
-    if (instant) bookOverlay.innerHTML = '';
-    else setTimeout(() => { bookOverlay.innerHTML = ''; }, 350);
-    renderShelf();
+    const scene = document.getElementById('bookPop');
+
+    const hardClose = () => {
+      openBookId = null; openBookStage = null; openBookOriginRect = null;
+      bookOverlay.classList.remove('show');
+      bookOverlay.innerHTML = '';
+      renderShelf();
+    };
+
+    if (instant || !scene || !bookOverlay.classList.contains('show')){
+      hardClose();
+      return;
+    }
+
+    const wasOpen = scene.classList.contains('stage-open');
+
+    const flyBackAndCleanup = () => {
+      openBookId = null; openBookStage = null; openBookOriginRect = null;
+      bookOverlay.classList.remove('show'); // triggers the fly-back-to-shelf transition
+      setTimeout(() => { bookOverlay.innerHTML = ''; renderShelf(); }, 650);
+    };
+
+    if (wasOpen){
+      // Step 1 — close the cover / shrink back to closed-book size in place.
+      scene.classList.remove('stage-open');
+      openBookStage = 'cover';
+      // Step 2 — once the cover has settled shut, fly it back to the shelf.
+      setTimeout(flyBackAndCleanup, 900);
+    } else {
+      flyBackAndCleanup();
+    }
   }
 
   // Builds the book scene fresh (called once per open) and flies it in from
