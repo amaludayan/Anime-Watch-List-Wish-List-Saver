@@ -741,6 +741,333 @@
   #app{ transition:transform .6s cubic-bezier(.22,.61,.36,1), filter .6s cubic-bezier(.22,.61,.36,1); transform-origin:50% 0; }
   body.modal-open #app{ transform:scale(.975); filter:saturate(.85) brightness(.72) blur(1.5px); }
 
+  /* ============ FAB — add to list ============ */
+  .fab-scrim{
+    position:fixed; inset:0; z-index:70;
+    background:color-mix(in srgb, var(--ink-0) 60%, transparent);
+    backdrop-filter:blur(0px);
+    -webkit-backdrop-filter:blur(0px);
+    opacity:0; pointer-events:none;
+    transition:opacity .45s cubic-bezier(.22,.61,.36,1), backdrop-filter .5s cubic-bezier(.22,.61,.36,1), -webkit-backdrop-filter .5s cubic-bezier(.22,.61,.36,1);
+  }
+  .fab-scrim.show{
+    opacity:1; pointer-events:auto;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+
+  .fab-wrap{
+    position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom));
+    transform:translateX(-50%);
+    z-index:75;
+    display:flex; flex-direction:column; align-items:center;
+    gap:12px;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  body.modal-open .fab-wrap{ opacity:0; pointer-events:none; transform:translateX(-50%) translateY(16px); }
+
+  .fab-options{
+    display:flex; flex-direction:column; align-items:stretch; gap:10px;
+    transform:translateY(14px) scale(.9);
+    opacity:0; pointer-events:none;
+    transform-origin:50% 100%;
+    transition:transform .42s cubic-bezier(.16,1,.3,1), opacity .32s ease;
+  }
+  .fab-wrap.open .fab-options{
+    transform:translateY(0) scale(1);
+    opacity:1; pointer-events:auto;
+  }
+  .fab-option{
+    display:flex; align-items:center; gap:10px;
+    padding:12px 20px 12px 16px;
+    background:var(--ink-1);
+    border:1px solid var(--line-1);
+    color:var(--ink-text);
+    font-family:var(--font-body); font-size:13.5px; font-weight:500;
+    white-space:nowrap;
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    cursor:pointer;
+    transition:border-color .2s ease, transform .15s ease, background .2s ease;
+  }
+  .fab-option:hover{ border-color:var(--jade-1); }
+  .fab-option:active{ transform:scale(.97); }
+  .fab-option .fab-option-icon{
+    width:30px; height:30px; flex:none;
+    display:grid; place-items:center;
+    background:var(--ink-2); border:1px solid var(--line-1);
+    color:var(--jade-1);
+  }
+  .fab-option .fab-option-icon svg{ width:15px; height:15px; }
+
+  .fab-main{
+    width:60px; height:60px;
+    display:grid; place-items:center;
+    background:var(--jade-0);
+    border:1px solid var(--jade-1);
+    color:var(--paper);
+    box-shadow:0 8px 26px rgba(47,111,86,.5), 0 2px 8px rgba(0,0,0,.4);
+    cursor:pointer;
+    transition:transform .45s cubic-bezier(.34,1.56,.64,1), background .25s ease, box-shadow .3s ease;
+  }
+  .fab-main:active{ transform:scale(.92); }
+  .fab-main svg{ width:24px; height:24px; transition:transform .4s cubic-bezier(.65,0,.35,1); }
+  .fab-wrap.open .fab-main{
+    background:var(--ink-2); border-color:var(--line-1);
+    color:var(--ink-text);
+  }
+  .fab-wrap.open .fab-main svg{ transform:rotate(45deg); }
+
+  /* ============ PICKER OVERLAY ============ */
+  .picker-backdrop{
+    position:fixed; inset:0; z-index:80;
+    background:color-mix(in srgb, var(--ink-0) 78%, transparent);
+    backdrop-filter:blur(0px);
+    -webkit-backdrop-filter:blur(0px);
+    opacity:0; pointer-events:none;
+    display:flex; align-items:flex-end; justify-content:center;
+    transition:opacity .5s cubic-bezier(.16,1,.3,1), backdrop-filter .6s cubic-bezier(.16,1,.3,1), -webkit-backdrop-filter .6s cubic-bezier(.16,1,.3,1);
+  }
+  @media (min-width:760px){ .picker-backdrop{ align-items:center; padding:32px; } }
+  .picker-backdrop.open{
+    opacity:1; pointer-events:auto;
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  }
+  .picker-panel{
+    position:relative;
+    width:100%; max-width:760px;
+    height:88vh; height:88dvh;
+    max-height:820px;
+    background:var(--ink-1);
+    border:1px solid var(--line-1);
+    border-bottom:none;
+    display:flex; flex-direction:column;
+    transform:translateY(40px) scale(.97);
+    opacity:0;
+    transition:transform .6s cubic-bezier(.16,1,.3,1) .05s, opacity .45s ease .05s;
+  }
+  @media (min-width:760px){ .picker-panel{ border-bottom:1px solid var(--line-1); height:82vh; } }
+  .picker-backdrop.open .picker-panel{ transform:translateY(0) scale(1); opacity:1; }
+
+  .picker-head{
+    display:flex; align-items:center; gap:12px;
+    padding:18px 18px 14px;
+    border-bottom:1px solid var(--line-1);
+    flex:none;
+  }
+  .picker-title{ font-family:var(--font-display); font-size:16px; letter-spacing:.03em; flex:1; min-width:0; }
+  .picker-title .target-tag{ color:var(--jade-1); }
+  .picker-close{
+    width:32px; height:32px; flex:none;
+    display:grid; place-items:center;
+    background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
+    cursor:pointer;
+  }
+  .picker-close svg{ width:15px; height:15px; }
+
+  .picker-search{
+    padding:14px 18px; border-bottom:1px solid var(--line-1); flex:none;
+  }
+  .picker-search-field{
+    display:flex; align-items:center; gap:10px;
+    background:var(--ink-2); border:1px solid var(--line-1);
+    padding:10px 14px;
+  }
+  .picker-search-field svg{ width:15px; height:15px; color:var(--ink-text-dim); flex:none; }
+  .picker-search-field input{
+    flex:1; min-width:0; background:transparent; border:0; outline:0;
+    color:var(--ink-text); font-family:var(--font-body); font-size:13.5px;
+  }
+  .picker-search-field input::placeholder{ color:var(--ink-text-dim); }
+
+  .picker-body{
+    flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    padding:16px 18px 90px;
+  }
+  .picker-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:10px;
+  }
+  @media (min-width:520px){ .picker-grid{ grid-template-columns:repeat(4,1fr); } }
+  @media (min-width:760px){ .picker-grid{ grid-template-columns:repeat(5,1fr); gap:12px; } }
+
+  .picker-card{
+    position:relative; border:0; padding:0; background:none; cursor:pointer;
+    display:flex; flex-direction:column; gap:6px; text-align:left;
+    font-family:inherit; color:inherit;
+  }
+  .picker-card .p-poster{
+    position:relative; width:100%; aspect-ratio:2/3;
+    background:var(--ink-2); border:1px solid var(--line-1);
+    overflow:hidden;
+  }
+  .picker-card .p-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .picker-card .p-title{ font-size:11.5px; line-height:1.3; color:var(--ink-text); }
+  .picker-card .p-check{
+    position:absolute; top:6px; right:6px;
+    width:22px; height:22px; border-radius:50%;
+    background:rgba(10,11,12,.6); border:1.5px solid rgba(230,230,220,.6);
+    display:grid; place-items:center;
+    transition:background .18s ease, border-color .18s ease, transform .18s cubic-bezier(.34,1.56,.64,1);
+  }
+  .picker-card .p-check svg{ width:12px; height:12px; color:var(--paper); opacity:0; transform:scale(.5); transition:opacity .15s ease, transform .18s cubic-bezier(.34,1.56,.64,1); }
+  .picker-card.selected .p-poster{ border-color:var(--jade-1); box-shadow:0 0 0 2px var(--jade-1) inset; }
+  .picker-card.selected .p-check{ background:var(--jade-0); border-color:var(--jade-1); transform:scale(1.05); }
+  .picker-card.selected .p-check svg{ opacity:1; transform:scale(1); }
+  .picker-card .p-inlist{
+    position:absolute; bottom:6px; left:6px;
+    font-family:var(--font-mono); font-size:8.5px; letter-spacing:.05em; text-transform:uppercase;
+    padding:2px 6px; background:rgba(10,11,12,.7); color:var(--jade-2); border:1px solid rgba(169,232,207,.35);
+  }
+
+  .picker-footer{
+    position:absolute; left:0; right:0; bottom:0;
+    padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg, transparent, var(--ink-1) 34%);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    transform:translateY(110%);
+    transition:transform .38s cubic-bezier(.22,.61,.36,1);
+  }
+  .picker-footer.show{ transform:translateY(0); }
+  .picker-footer .count-label{ font-family:var(--font-mono); font-size:11.5px; color:var(--ink-text-dim); }
+  .picker-add-btn{
+    padding:12px 22px;
+    background:var(--jade-0); border:1px solid var(--jade-1); color:var(--paper);
+    font-family:var(--font-body); font-size:13px; font-weight:600; letter-spacing:.02em;
+    cursor:pointer; transition:transform .15s ease, background .2s ease;
+  }
+  .picker-add-btn:hover{ background:var(--jade-1); }
+  .picker-add-btn:active{ transform:scale(.96); }
+
+  .picker-state{ padding:60px 20px; text-align:center; color:var(--ink-text-dim); font-size:13px; grid-column:1/-1; }
+
+  /* ============ NOTES STEP ============ */
+  .notes-panel{
+    position:absolute; inset:0; z-index:2;
+    background:var(--ink-1);
+    display:flex; flex-direction:column;
+    transform:translateY(100%);
+    transition:transform .45s cubic-bezier(.16,1,.3,1);
+  }
+  .notes-panel.show{ transform:translateY(0); }
+  .notes-head{
+    display:flex; align-items:center; gap:12px;
+    padding:18px; border-bottom:1px solid var(--line-1); flex:none;
+  }
+  .notes-back{
+    width:32px; height:32px; flex:none;
+    display:grid; place-items:center;
+    background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
+    cursor:pointer;
+  }
+  .notes-back svg{ width:15px; height:15px; }
+  .notes-body{ flex:1; min-height:0; overflow-y:auto; padding:20px 18px; }
+  .notes-anime{ display:flex; gap:14px; margin-bottom:20px; }
+  .notes-anime .n-poster{
+    width:72px; aspect-ratio:2/3; flex:none;
+    background:var(--ink-2); border:1px solid var(--line-1); overflow:hidden;
+  }
+  .notes-anime .n-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .notes-anime .n-info h4{ font-family:var(--font-display); font-size:15px; margin:2px 0 4px; line-height:1.3; }
+  .notes-anime .n-info .n-meta{ font-family:var(--font-mono); font-size:10.5px; color:var(--ink-text-dim); letter-spacing:.05em; }
+  .notes-label{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--sandal-0); margin-bottom:8px; display:block; }
+  .notes-textarea{
+    width:100%; min-height:140px; resize:vertical;
+    background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
+    font-family:var(--font-body); font-size:13.5px; line-height:1.6;
+    padding:12px 14px; outline:0; transition:border-color .2s ease;
+  }
+  .notes-textarea:focus{ border-color:var(--jade-1); }
+  .notes-footer{ padding:14px 18px calc(14px + env(safe-area-inset-bottom)); border-top:1px solid var(--line-1); display:flex; gap:10px; flex:none; }
+  .btn-ghost, .btn-solid{
+    flex:1; padding:12px 16px; font-family:var(--font-body); font-size:13px; font-weight:600;
+    cursor:pointer; transition:transform .15s ease, background .2s ease, border-color .2s ease;
+    text-align:center;
+  }
+  .btn-ghost{ background:transparent; border:1px solid var(--line-1); color:var(--ink-text-dim); }
+  .btn-ghost:hover{ border-color:var(--ink-text-dim); color:var(--ink-text); }
+  .btn-solid{ background:var(--jade-0); border:1px solid var(--jade-1); color:var(--paper); }
+  .btn-solid:hover{ background:var(--jade-1); }
+  .btn-ghost:active, .btn-solid:active{ transform:scale(.97); }
+
+  /* ============ LIST VIEW (Watched / Wish List) ============ */
+  .listview-items{ display:flex; flex-direction:column; gap:12px; padding:4px 18px 40px; }
+  .listview-empty{ padding:60px 20px; text-align:center; color:var(--ink-text-dim); font-size:13px; }
+  .listview-card{
+    display:flex; gap:14px;
+    background:var(--ink-1); border:1px solid var(--line-1);
+    padding:12px;
+  }
+  .listview-card .lv-poster{
+    width:58px; aspect-ratio:2/3; flex:none; cursor:pointer;
+    background:var(--ink-2); border:1px solid var(--line-1); overflow:hidden;
+  }
+  .listview-card .lv-poster img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .listview-card .lv-info{ flex:1; min-width:0; display:flex; flex-direction:column; }
+  .listview-card .lv-info h4{ font-family:var(--font-display); font-size:13.5px; margin:0 0 4px; line-height:1.3; cursor:pointer; }
+  .listview-card .lv-meta{ font-family:var(--font-mono); font-size:10px; color:var(--ink-text-dim); letter-spacing:.04em; margin-bottom:6px; }
+  .listview-card .lv-notes{ font-size:12px; line-height:1.5; color:var(--ink-text-dim); font-style:italic; white-space:pre-line; }
+  .listview-card .lv-actions{ display:flex; gap:6px; margin-top:auto; padding-top:8px; }
+  .lv-action-btn{
+    width:26px; height:26px; display:grid; place-items:center;
+    background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text-dim);
+    cursor:pointer; transition:border-color .18s ease, color .18s ease;
+  }
+  .lv-action-btn svg{ width:12px; height:12px; }
+  .lv-action-btn:hover{ border-color:var(--jade-1); color:var(--jade-1); }
+  .lv-action-btn.danger:hover{ border-color:#d97a6b; color:#d97a6b; }
+
+  /* ============ SETTINGS / IMPORT-EXPORT ============ */
+  .settings-block{ padding:6px 18px 40px; display:flex; flex-direction:column; gap:22px; }
+  .settings-group{ display:flex; flex-direction:column; gap:10px; }
+  .settings-group .sg-label{ font-family:var(--font-mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--sandal-0); }
+  .settings-group .sg-desc{ font-size:12px; color:var(--ink-text-dim); line-height:1.6; margin:-4px 0 2px; }
+  .settings-btn{
+    display:flex; align-items:center; gap:10px;
+    padding:13px 16px; background:var(--ink-1); border:1px solid var(--line-1); color:var(--ink-text);
+    font-family:var(--font-body); font-size:13px; font-weight:500; cursor:pointer;
+    transition:border-color .2s ease;
+  }
+  .settings-btn:hover{ border-color:var(--jade-1); }
+  .settings-btn svg{ width:15px; height:15px; color:var(--jade-1); flex:none; }
+  .settings-stats{ font-family:var(--font-mono); font-size:11px; color:var(--ink-text-dim); display:flex; gap:18px; }
+
+  /* ============ TOAST ============ */
+  .toast{
+    position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(12px);
+    z-index:90;
+    background:var(--ink-2); border:1px solid var(--jade-1); color:var(--ink-text);
+    padding:11px 20px; font-size:12.5px; font-family:var(--font-body);
+    display:flex; align-items:center; gap:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    opacity:0; pointer-events:none;
+    transition:opacity .3s ease, transform .35s cubic-bezier(.22,.61,.36,1);
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast svg{ width:14px; height:14px; color:var(--jade-1); flex:none; }
+
+  /* Generic sub-panel backdrop (used by list view + settings, same visual language as picker) */
+  .subpanel-backdrop{
+    position:fixed; inset:0; z-index:80;
+    background:color-mix(in srgb, var(--ink-0) 78%, transparent);
+    backdrop-filter:blur(0px); -webkit-backdrop-filter:blur(0px);
+    opacity:0; pointer-events:none;
+    display:flex; align-items:flex-end; justify-content:center;
+    transition:opacity .5s cubic-bezier(.16,1,.3,1), backdrop-filter .6s cubic-bezier(.16,1,.3,1), -webkit-backdrop-filter .6s cubic-bezier(.16,1,.3,1);
+  }
+  @media (min-width:760px){ .subpanel-backdrop{ align-items:center; padding:32px; } }
+  .subpanel-backdrop.open{ opacity:1; pointer-events:auto; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .subpanel-panel{
+    position:relative; width:100%; max-width:640px;
+    max-height:86vh; max-height:86dvh;
+    background:var(--ink-1); border:1px solid var(--line-1); border-bottom:none;
+    display:flex; flex-direction:column; overflow:hidden;
+    transform:translateY(40px) scale(.97); opacity:0;
+    transition:transform .6s cubic-bezier(.16,1,.3,1) .05s, opacity .45s ease .05s;
+  }
+  @media (min-width:760px){ .subpanel-panel{ border-bottom:1px solid var(--line-1); max-height:80vh; } }
+  .subpanel-backdrop.open .subpanel-panel{ transform:translateY(0) scale(1); opacity:1; }
+  .subpanel-scroll{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding-top:8px; }
+
   @media (prefers-reduced-motion: reduce){
     *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
   }
@@ -858,11 +1185,9 @@
 <aside class="drawer" id="menuDrawer" aria-label="Menu">
   <h3>目録 · Menu</h3>
   <ul>
-    <li><a href="#">Watching</a></li>
-    <li><a href="#">Wish List</a></li>
-    <li><a href="#">Completed</a></li>
-    <li><a href="#">History</a></li>
-    <li><a href="#">Settings</a></li>
+    <li><a href="#" id="menuWatchedBtn">Watched List</a></li>
+    <li><a href="#" id="menuWishBtn">Wish List</a></li>
+    <li><a href="#" id="menuSettingsBtn">Settings</a></li>
     <li><a href="#">About KŌROKU</a></li>
   </ul>
 </aside>
@@ -878,6 +1203,112 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ============ FAB — ADD TO LIST ============ -->
+<div class="fab-scrim" id="fabScrim"></div>
+<div class="fab-wrap" id="fabWrap">
+  <div class="fab-options" id="fabOptions">
+    <button class="fab-option" type="button" data-target="watched">
+      <span class="fab-option-icon"><i data-lucide="check"></i></span>
+      Add to Watched List
+    </button>
+    <button class="fab-option" type="button" data-target="wish">
+      <span class="fab-option-icon"><i data-lucide="bookmark"></i></span>
+      Add to Wish List
+    </button>
+  </div>
+  <button class="fab-main" id="fabMain" type="button" aria-label="Add anime to a list" aria-haspopup="true">
+    <i data-lucide="plus"></i>
+  </button>
+</div>
+
+<!-- ============ PICKER OVERLAY (search / select anime) ============ -->
+<div class="picker-backdrop" id="pickerBackdrop" role="dialog" aria-modal="true" aria-label="Add anime to list">
+  <div class="picker-panel">
+    <div class="picker-head">
+      <div class="picker-title">Add to <span class="target-tag" id="pickerTargetLabel">Watched List</span></div>
+      <button class="picker-close" id="pickerClose" aria-label="Close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="picker-search">
+      <label class="picker-search-field">
+        <i data-lucide="search"></i>
+        <input type="text" id="pickerSearchInput" placeholder="Search anime to add…" autocomplete="off">
+      </label>
+    </div>
+    <div class="picker-body">
+      <div class="picker-grid" id="pickerGrid"></div>
+    </div>
+    <div class="picker-footer" id="pickerFooter">
+      <span class="count-label" id="pickerCountLabel">0 selected</span>
+      <button class="picker-add-btn" id="pickerAddBtn" type="button">Add</button>
+    </div>
+
+    <!-- Notes step (single-anime add) — slides over the picker -->
+    <div class="notes-panel" id="notesPanel">
+      <div class="notes-head">
+        <button class="notes-back" id="notesBack" aria-label="Back"><i data-lucide="arrow-left"></i></button>
+        <div class="picker-title">Personal Notes</div>
+      </div>
+      <div class="notes-body">
+        <div class="notes-anime" id="notesAnimePreview"></div>
+        <span class="notes-label">Your thoughts (optional)</span>
+        <textarea class="notes-textarea" id="notesTextarea" placeholder="What did you think? Favorite moments, ratings, anything you want to remember…"></textarea>
+      </div>
+      <div class="notes-footer">
+        <button class="btn-ghost" id="notesSkipBtn" type="button">Skip</button>
+        <button class="btn-solid" id="notesSaveBtn" type="button">Save to List</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LIST VIEW OVERLAY (Watched List / Wish List) ============ -->
+<div class="subpanel-backdrop" id="listviewBackdrop" role="dialog" aria-modal="true" aria-label="Saved list">
+  <div class="subpanel-panel">
+    <div class="picker-head">
+      <div class="picker-title" id="listviewTitle">Watched List</div>
+      <button class="picker-close" id="listviewClose" aria-label="Close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="subpanel-scroll">
+      <div class="listview-items" id="listviewItems"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS / IMPORT-EXPORT OVERLAY ============ -->
+<div class="subpanel-backdrop" id="settingsBackdrop" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="subpanel-panel">
+    <div class="picker-head">
+      <div class="picker-title">Settings</div>
+      <button class="picker-close" id="settingsClose" aria-label="Close"><i data-lucide="x"></i></button>
+    </div>
+    <div class="subpanel-scroll">
+      <div class="settings-block">
+        <div class="settings-group">
+          <span class="sg-label">Your Data</span>
+          <span class="settings-stats" id="settingsStats">Watched — 0 · Wish List — 0</span>
+        </div>
+        <div class="settings-group">
+          <span class="sg-label">Backup</span>
+          <span class="sg-desc">Export your lists as a JSON file, or import a previously saved backup. Importing merges with what's already saved — matching entries are updated.</span>
+          <button class="settings-btn" id="exportBtn" type="button">
+            <i data-lucide="download"></i> Export as JSON
+          </button>
+          <button class="settings-btn" id="importBtn" type="button">
+            <i data-lucide="upload"></i> Import from JSON
+          </button>
+          <input type="file" id="importFileInput" accept="application/json,.json" style="display:none">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div class="toast" id="toast">
+  <i data-lucide="check-circle"></i>
+  <span id="toastMsg">Saved</span>
 </div>
 
 <script>
@@ -1102,6 +1533,8 @@
     else resultsLabel.textContent = 'Top anime, by popularity';
   }
 
+  let lastLoadedAnime = [];
+
   async function loadAnime(){
     const token = ++state.requestToken;
     updateResultsLabel();
@@ -1112,7 +1545,9 @@
       const data = await gqlFetch(query, variables);
       if (token !== state.requestToken) return; // a newer request superseded this one
 
-      renderCards(data.Page?.media);
+      const media = data.Page?.media || [];
+      lastLoadedAnime = media;
+      renderCards(media);
       state.lastPage = data.Page?.pageInfo?.lastPage || 1;
       renderPagination();
     } catch (err){
@@ -1442,7 +1877,476 @@
   setTimeout(() => {
     if (!appEl.classList.contains('visible')) finishIntro();
   }, 4500);
+
+  // ==================================================================
+  // ---- Custom List Management (LocalStorage: Watched / Wish List) ----
+  // ==================================================================
+  const LISTS_KEY = 'koroku-lists';
+
+  function loadLists(){
+    try {
+      const raw = localStorage.getItem(LISTS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return {
+        watched: (parsed && parsed.watched) || {},
+        wish: (parsed && parsed.wish) || {}
+      };
+    } catch(e){
+      console.warn('Could not read saved lists', e);
+      return { watched: {}, wish: {} };
+    }
+  }
+  function saveLists(lists){
+    try {
+      localStorage.setItem(LISTS_KEY, JSON.stringify(lists));
+      return true;
+    } catch(e){
+      console.error('Could not save lists', e);
+      showToast('Storage is full or unavailable — could not save.', 'alert-triangle');
+      return false;
+    }
+  }
+  let lists = loadLists();
+  const LIST_NAMES = { watched: 'Watched List', wish: 'Wish List' };
+
+  function snapshotAnime(anime){
+    // Works for both AniList list-card shape and detail (Media) shape.
+    const title = anime.title?.english || anime.title?.userPreferred || anime.title?.romaji || 'Untitled';
+    const img = anime.coverImage?.large || anime.coverImage?.extraLarge || '';
+    const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : null;
+    const year = anime.seasonYear || anime.startDate?.year || null;
+    return {
+      id: anime.id,
+      title, img, score, year,
+      format: anime.format || null
+    };
+  }
+
+  function addToList(target, anime, notes){
+    const entry = snapshotAnime(anime);
+    entry.notes = notes || '';
+    entry.addedAt = lists[target][entry.id]?.addedAt || Date.now();
+    lists[target][entry.id] = entry;
+    saveLists(lists);
+    refreshInListMarkers();
+  }
+  function addManyToList(target, animeList){
+    animeList.forEach(a => {
+      const entry = snapshotAnime(a);
+      entry.notes = lists[target][entry.id]?.notes || '';
+      entry.addedAt = lists[target][entry.id]?.addedAt || Date.now();
+      lists[target][entry.id] = entry;
+    });
+    saveLists(lists);
+    refreshInListMarkers();
+  }
+  function removeFromList(target, id){
+    delete lists[target][id];
+    saveLists(lists);
+    refreshInListMarkers();
+  }
+  function isInList(target, id){
+    return !!lists[target]?.[id];
+  }
+
+  // ---- Toast ----
+  const toastEl = document.getElementById('toast');
+  const toastMsgEl = document.getElementById('toastMsg');
+  let toastTimer = null;
+  function showToast(msg, icon = 'check-circle'){
+    toastMsgEl.textContent = msg;
+    toastEl.querySelector('svg')?.remove();
+    const iconEl = document.createElement('i');
+    iconEl.setAttribute('data-lucide', icon);
+    toastEl.prepend(iconEl);
+    renderIcons();
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+  }
+
+  // ---- FAB ----
+  const fabWrap = document.getElementById('fabWrap');
+  const fabMain = document.getElementById('fabMain');
+  const fabScrim = document.getElementById('fabScrim');
+  const fabOptions = document.getElementById('fabOptions');
+
+  function openFab(){ fabWrap.classList.add('open'); fabScrim.classList.add('show'); }
+  function closeFab(){ fabWrap.classList.remove('open'); fabScrim.classList.remove('show'); }
+  fabMain.addEventListener('click', () => {
+    fabWrap.classList.contains('open') ? closeFab() : openFab();
+  });
+  fabScrim.addEventListener('click', closeFab);
+  fabOptions.querySelectorAll('.fab-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      closeFab();
+      openPicker(target);
+    });
+  });
+
+  // ---- Picker overlay ----
+  const pickerBackdrop = document.getElementById('pickerBackdrop');
+  const pickerClose = document.getElementById('pickerClose');
+  const pickerTargetLabel = document.getElementById('pickerTargetLabel');
+  const pickerSearchInput = document.getElementById('pickerSearchInput');
+  const pickerGrid = document.getElementById('pickerGrid');
+  const pickerFooter = document.getElementById('pickerFooter');
+  const pickerCountLabel = document.getElementById('pickerCountLabel');
+  const pickerAddBtn = document.getElementById('pickerAddBtn');
+
+  const picker = {
+    target: 'watched',
+    items: [],          // anime currently rendered in the grid (raw AniList shape)
+    selected: new Map()  // id -> anime object
+  };
+
+  function openPicker(target){
+    picker.target = target;
+    picker.selected.clear();
+    pickerTargetLabel.textContent = LIST_NAMES[target];
+    pickerSearchInput.value = '';
+    updatePickerFooter();
+    lockScroll();
+    pickerBackdrop.classList.remove('closing');
+    void pickerBackdrop.offsetHeight;
+    requestAnimationFrame(() => requestAnimationFrame(() => pickerBackdrop.classList.add('open')));
+    // Default view: whatever is currently loaded on the home grid, so users
+    // can pick straight from what they're already browsing.
+    picker.items = (lastLoadedAnime && lastLoadedAnime.length) ? lastLoadedAnime : [];
+    if (picker.items.length){
+      renderPickerGrid(picker.items);
+    } else {
+      pickerSearchGeneric('');
+    }
+    setTimeout(() => pickerSearchInput.focus({ preventScroll: true }), 350);
+  }
+  function closePicker(){
+    pickerBackdrop.classList.add('closing');
+    pickerBackdrop.classList.remove('open');
+    unlockScroll();
+    closeNotesStep(true);
+    setTimeout(() => { pickerBackdrop.classList.remove('closing'); }, 420);
+  }
+  pickerClose.addEventListener('click', closePicker);
+  pickerBackdrop.addEventListener('click', e => { if (e.target === pickerBackdrop) closePicker(); });
+
+  function renderPickerGrid(list){
+    if (!list || !list.length){
+      pickerGrid.innerHTML = `<div class="picker-state">No titles turned up. Try a different search.</div>`;
+      return;
+    }
+    pickerGrid.innerHTML = list.map(anime => {
+      const title = escapeHtml(anime.title?.english || anime.title?.userPreferred || anime.title?.romaji || 'Untitled');
+      const img = anime.coverImage?.large || anime.coverImage?.extraLarge || '';
+      const already = isInList(picker.target, anime.id);
+      const isSelected = picker.selected.has(anime.id);
+      return `
+        <button class="picker-card ${isSelected ? 'selected' : ''}" type="button" data-id="${anime.id}">
+          <div class="p-poster">
+            ${img ? `<img src="${img}" alt="${title}" loading="lazy">` : ''}
+            <span class="p-check"><i data-lucide="check"></i></span>
+            ${already ? `<span class="p-inlist">Saved</span>` : ''}
+          </div>
+          <div class="p-title">${title}</div>
+        </button>`;
+    }).join('');
+    pickerGrid.querySelectorAll('.picker-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = Number(card.dataset.id);
+        const anime = picker.items.find(a => a.id === id);
+        if (!anime) return;
+        if (picker.selected.has(id)){
+          picker.selected.delete(id);
+          card.classList.remove('selected');
+        } else {
+          picker.selected.set(id, anime);
+          card.classList.add('selected');
+        }
+        updatePickerFooter();
+      });
+    });
+    renderIcons();
+  }
+
+  function updatePickerFooter(){
+    const n = picker.selected.size;
+    pickerCountLabel.textContent = n === 0 ? 'Tap titles to select' : `${n} selected`;
+    pickerAddBtn.textContent = n > 1 ? `Add ${n}` : 'Add';
+    pickerFooter.classList.toggle('show', n > 0);
+  }
+
+  pickerAddBtn.addEventListener('click', () => {
+    const chosen = [...picker.selected.values()];
+    if (!chosen.length) return;
+    if (chosen.length === 1){
+      openNotesStep(chosen[0]);
+    } else {
+      addManyToList(picker.target, chosen);
+      showToast(`Added ${chosen.length} titles to ${LIST_NAMES[picker.target]}`);
+      closePicker();
+    }
+  });
+
+  // Debounced search inside the picker — separate from the home search.
+  let pickerSearchTimer = null;
+  pickerSearchInput.addEventListener('input', () => {
+    clearTimeout(pickerSearchTimer);
+    const value = pickerSearchInput.value.trim();
+    pickerSearchTimer = setTimeout(() => {
+      if (!value){
+        picker.items = (lastLoadedAnime && lastLoadedAnime.length) ? lastLoadedAnime : [];
+        renderPickerGrid(picker.items);
+      } else {
+        pickerSearchGeneric(value);
+      }
+    }, 450);
+  });
+
+  let pickerSearchToken = 0;
+  async function pickerSearchGeneric(query){
+    const token = ++pickerSearchToken;
+    pickerGrid.innerHTML = `<div class="picker-state">Searching…</div>`;
+    try {
+      const variables = query
+        ? { page: 1, perPage: 24, search: query, sort: ['SEARCH_MATCH'] }
+        : { page: 1, perPage: 24, sort: ['POPULARITY_DESC'] };
+      const data = await gqlFetch(LIST_QUERY, variables);
+      if (token !== pickerSearchToken) return;
+      picker.items = data.Page?.media || [];
+      renderPickerGrid(picker.items);
+    } catch(err){
+      if (token !== pickerSearchToken) return;
+      console.error(err);
+      pickerGrid.innerHTML = `<div class="picker-state">Couldn't load titles right now. Please try again.</div>`;
+    }
+  }
+
+  // ---- Notes step ----
+  const notesPanel = document.getElementById('notesPanel');
+  const notesBack = document.getElementById('notesBack');
+  const notesAnimePreview = document.getElementById('notesAnimePreview');
+  const notesTextarea = document.getElementById('notesTextarea');
+  const notesSkipBtn = document.getElementById('notesSkipBtn');
+  const notesSaveBtn = document.getElementById('notesSaveBtn');
+  let notesTargetAnime = null;
+
+  function openNotesStep(anime){
+    notesTargetAnime = anime;
+    const title = escapeHtml(anime.title?.english || anime.title?.userPreferred || anime.title?.romaji || 'Untitled');
+    const img = anime.coverImage?.large || anime.coverImage?.extraLarge || '';
+    const meta = [formatLabel(anime.format), anime.seasonYear || anime.startDate?.year].filter(Boolean).join(' · ');
+    const existingNotes = lists[picker.target]?.[anime.id]?.notes || '';
+    notesAnimePreview.innerHTML = `
+      <div class="n-poster">${img ? `<img src="${img}" alt="${title}">` : ''}</div>
+      <div class="n-info">
+        <h4>${title}</h4>
+        <div class="n-meta">${escapeHtml(meta)}</div>
+      </div>`;
+    notesTextarea.value = existingNotes;
+    notesPanel.classList.add('show');
+    setTimeout(() => notesTextarea.focus({ preventScroll: true }), 300);
+  }
+  function closeNotesStep(instant){
+    notesPanel.classList.remove('show');
+    if (instant) { notesTextarea.value = ''; notesTargetAnime = null; }
+  }
+  notesBack.addEventListener('click', () => closeNotesStep(false));
+
+  notesSkipBtn.addEventListener('click', () => {
+    if (!notesTargetAnime) return;
+    addToList(picker.target, notesTargetAnime, '');
+    showToast(`Added to ${LIST_NAMES[picker.target]}`);
+    closeNotesStep(true);
+    closePicker();
+  });
+  notesSaveBtn.addEventListener('click', () => {
+    if (!notesTargetAnime) return;
+    addToList(picker.target, notesTargetAnime, notesTextarea.value.trim());
+    showToast(`Added to ${LIST_NAMES[picker.target]}`);
+    closeNotesStep(true);
+    closePicker();
+  });
+
+  // Keep an "already saved" marker in sync on the picker grid after edits.
+  function refreshInListMarkers(){
+    pickerGrid.querySelectorAll('.picker-card').forEach(card => {
+      const id = Number(card.dataset.id);
+      const already = isInList(picker.target, id);
+      let tag = card.querySelector('.p-inlist');
+      if (already && !tag){
+        tag = document.createElement('span');
+        tag.className = 'p-inlist';
+        tag.textContent = 'Saved';
+        card.querySelector('.p-poster').appendChild(tag);
+      } else if (!already && tag){
+        tag.remove();
+      }
+    });
+    updateSettingsStats();
+  }
+
+  // ---- List view (Watched List / Wish List) ----
+  const listviewBackdrop = document.getElementById('listviewBackdrop');
+  const listviewClose = document.getElementById('listviewClose');
+  const listviewTitle = document.getElementById('listviewTitle');
+  const listviewItems = document.getElementById('listviewItems');
+  let listviewTarget = 'watched';
+
+  function openListView(target){
+    listviewTarget = target;
+    listviewTitle.textContent = LIST_NAMES[target];
+    renderListView();
+    closeDrawers();
+    lockScroll();
+    listviewBackdrop.classList.remove('closing');
+    void listviewBackdrop.offsetHeight;
+    requestAnimationFrame(() => requestAnimationFrame(() => listviewBackdrop.classList.add('open')));
+  }
+  function closeListView(){
+    listviewBackdrop.classList.remove('open');
+    unlockScroll();
+  }
+  listviewClose.addEventListener('click', closeListView);
+  listviewBackdrop.addEventListener('click', e => { if (e.target === listviewBackdrop) closeListView(); });
+
+  function renderListView(){
+    const entries = Object.values(lists[listviewTarget] || {}).sort((a,b) => b.addedAt - a.addedAt);
+    if (!entries.length){
+      listviewItems.innerHTML = `<div class="listview-empty">Nothing saved here yet. Tap the + button to add titles.</div>`;
+      return;
+    }
+    listviewItems.innerHTML = entries.map(e => {
+      const meta = [formatLabel(e.format), e.year, e.score ? `★ ${e.score}` : null].filter(Boolean).join(' · ');
+      return `
+        <div class="listview-card" data-id="${e.id}">
+          <div class="lv-poster" data-open-id="${e.id}">${e.img ? `<img src="${e.img}" alt="${escapeHtml(e.title)}">` : ''}</div>
+          <div class="lv-info">
+            <h4 data-open-id="${e.id}">${escapeHtml(e.title)}</h4>
+            <div class="lv-meta">${escapeHtml(meta)}</div>
+            ${e.notes ? `<div class="lv-notes">${escapeHtml(e.notes)}</div>` : ''}
+            <div class="lv-actions">
+              <button class="lv-action-btn" data-edit-id="${e.id}" aria-label="Edit notes"><i data-lucide="pencil"></i></button>
+              <button class="lv-action-btn danger" data-remove-id="${e.id}" aria-label="Remove from list"><i data-lucide="trash-2"></i></button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    listviewItems.querySelectorAll('[data-open-id]').forEach(el => {
+      el.addEventListener('click', () => { closeListView(); openModal(Number(el.dataset.openId)); });
+    });
+    listviewItems.querySelectorAll('[data-remove-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        removeFromList(listviewTarget, Number(btn.dataset.removeId));
+        renderListView();
+        showToast('Removed from ' + LIST_NAMES[listviewTarget]);
+      });
+    });
+    listviewItems.querySelectorAll('[data-edit-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = Number(btn.dataset.editId);
+        const entry = lists[listviewTarget][id];
+        if (!entry) return;
+        const updated = prompt('Edit your notes for "' + entry.title + '":', entry.notes || '');
+        if (updated === null) return; // cancelled
+        entry.notes = updated.trim();
+        saveLists(lists);
+        renderListView();
+      });
+    });
+    renderIcons();
+  }
+
+  document.getElementById('menuWatchedBtn').addEventListener('click', e => { e.preventDefault(); openListView('watched'); });
+  document.getElementById('menuWishBtn').addEventListener('click', e => { e.preventDefault(); openListView('wish'); });
+
+  // ---- Settings / Import-Export ----
+  const settingsBackdrop = document.getElementById('settingsBackdrop');
+  const settingsClose = document.getElementById('settingsClose');
+  const settingsStats = document.getElementById('settingsStats');
+  const exportBtn = document.getElementById('exportBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importFileInput = document.getElementById('importFileInput');
+
+  function updateSettingsStats(){
+    const w = Object.keys(lists.watched || {}).length;
+    const s = Object.keys(lists.wish || {}).length;
+    settingsStats.textContent = `Watched — ${w} · Wish List — ${s}`;
+  }
+
+  function openSettings(){
+    updateSettingsStats();
+    closeDrawers();
+    lockScroll();
+    settingsBackdrop.classList.remove('closing');
+    void settingsBackdrop.offsetHeight;
+    requestAnimationFrame(() => requestAnimationFrame(() => settingsBackdrop.classList.add('open')));
+  }
+  function closeSettings(){
+    settingsBackdrop.classList.remove('open');
+    unlockScroll();
+  }
+  settingsClose.addEventListener('click', closeSettings);
+  settingsBackdrop.addEventListener('click', e => { if (e.target === settingsBackdrop) closeSettings(); });
+  document.getElementById('menuSettingsBtn').addEventListener('click', e => { e.preventDefault(); openSettings(); });
+
+  exportBtn.addEventListener('click', () => {
+    const payload = {
+      app: 'KOROKU',
+      exportedAt: new Date().toISOString(),
+      lists
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `koroku-lists-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    showToast('Backup downloaded', 'download');
+  });
+
+  importBtn.addEventListener('click', () => importFileInput.click());
+  importFileInput.addEventListener('change', () => {
+    const file = importFileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const incoming = parsed.lists ? parsed.lists : parsed; // accept raw {watched,wish} too
+        if (!incoming || (!incoming.watched && !incoming.wish)){
+          throw new Error('File does not look like a KŌROKU backup.');
+        }
+        const before = Object.keys(lists.watched).length + Object.keys(lists.wish).length;
+        lists.watched = { ...lists.watched, ...(incoming.watched || {}) };
+        lists.wish = { ...lists.wish, ...(incoming.wish || {}) };
+        saveLists(lists);
+        const after = Object.keys(lists.watched).length + Object.keys(lists.wish).length;
+        updateSettingsStats();
+        refreshInListMarkers();
+        showToast(`Imported — ${after - before} new, ${after} total`, 'upload');
+      } catch(err){
+        console.error(err);
+        showToast('Could not read that file — is it a valid KŌROKU backup?', 'alert-triangle');
+      } finally {
+        importFileInput.value = '';
+      }
+    };
+    reader.onerror = () => {
+      showToast('Could not read that file.', 'alert-triangle');
+      importFileInput.value = '';
+    };
+    reader.readAsText(file);
+  });
+
+  updateSettingsStats();
 </script>
+
 
 </body>
 </html>
