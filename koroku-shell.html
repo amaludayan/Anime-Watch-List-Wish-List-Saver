@@ -486,8 +486,13 @@
 </aside>
 
 <script>
-  // ---- Lucide icons ----
-  lucide.createIcons();
+  // ---- Lucide icons (defensive: don't let a CDN hiccup break the rest of the script) ----
+  function renderIcons(){
+    if (window.lucide && typeof lucide.createIcons === 'function'){
+      try { lucide.createIcons(); } catch(e){ console.warn('lucide render failed', e); }
+    }
+  }
+  renderIcons();
 
   // ---- Theme toggle ----
   const root = document.documentElement;
@@ -501,7 +506,7 @@
     themeBtn.innerHTML = root.classList.contains('light')
       ? '<i data-lucide="moon"></i>'
       : '<i data-lucide="sun"></i>';
-    lucide.createIcons();
+    renderIcons();
   }
   refreshThemeIcon();
   themeBtn.addEventListener('click', () => {
@@ -564,7 +569,17 @@
     setTimeout(() => { introEl.style.display = 'none'; }, 950);
   }
 
-  window.addEventListener('load', runIntro);
+  // Fires 'load' can be missed if it already happened before this script ran
+  // (common on fast static hosts). Cover all cases + add a hard fallback.
+  if (document.readyState === 'complete'){
+    runIntro();
+  } else {
+    window.addEventListener('load', runIntro);
+  }
+  // Safety net: never let the app stay stuck behind the intro.
+  setTimeout(() => {
+    if (!appEl.classList.contains('visible')) finishIntro();
+  }, 4500);
 </script>
 
 </body>
