@@ -272,13 +272,14 @@
 
   .pct-row{
     margin-top:10px;
-    display:flex; align-items:baseline; gap:10px;
+    display:flex; flex-direction:column-reverse; align-items:center; gap:4px;
     font-family:var(--font-mono);
+    position:relative; z-index:4;
   }
   .pct-num{
     font-size:22px; font-weight:400; letter-spacing:.05em;
     color:var(--paper);
-    min-width:64px; text-align:right;
+    text-align:center;
     font-variant-numeric:tabular-nums;
   }
   .pct-label{
@@ -286,9 +287,31 @@
     color:var(--ink-text-dim);
   }
 
+  /* big outline site-name glyph, spans from behind the emblem down to the dot grid */
+  .site-glyph{
+    position:absolute;
+    left:50%; top:56px;
+    transform:translateX(-50%);
+    width:100%;
+    height:296px;
+    display:flex; align-items:flex-start; justify-content:center;
+    font-family:var(--font-display);
+    font-size:clamp(140px,22vw,240px);
+    line-height:1;
+    color:transparent;
+    -webkit-text-stroke:1px rgba(255,255,255,.8);
+    text-stroke:1px rgba(255,255,255,.8);
+    opacity:.85;
+    letter-spacing:0;
+    pointer-events:none;
+    user-select:none;
+    z-index:1;
+  }
+
   .dot-grid{
     margin-top:22px;
     display:grid; grid-template-columns:repeat(3,7px); gap:5px;
+    position:relative; z-index:4;
   }
   .dot-grid span{
     width:7px; height:7px; border:1px solid rgba(207,192,163,.55);
@@ -320,6 +343,7 @@
     .emblem-wrap{ width:110px; height:110px; margin-top:-34px; }
     .glyph-wing{ opacity:.09; }
     .side-text{ display:none; }
+    .site-glyph{ height:230px; top:40px; font-size:clamp(100px,34vw,170px); }
   }
 
   /* ============ APP SHELL ============ */
@@ -1575,6 +1599,8 @@
       <span class="jade-mark left-mark"></span>
       <span class="jade-mark right-mark"></span>
     </div>
+
+    <span class="site-glyph" aria-hidden="true">録</span>
 
     <div class="emblem-wrap">
       <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
