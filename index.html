@@ -1182,6 +1182,10 @@
   .book-spine.selected-for-open{ transform:rotateY(-30deg) translateY(-8px); }
   .book-spine.selected-for-open .b-edge-glow{ opacity:1; }
   .book-spine.hidden-for-open{ opacity:0; pointer-events:none; }
+  /* the delete badge must sit in front of the extruded 3D cover face, not
+     just above it in DOM order — preserve-3d sorts by actual depth. */
+  .book-spine .lv-delete-badge{ z-index:10; transform:translateZ(30px); }
+  .book-spine .lv-delete-badge:active{ transform:translateZ(30px) scale(.88); }
 
   /* ---- Popped-out / opened book overlay — real 3D hinge-open book ---- */
   .book-overlay{
@@ -1353,8 +1357,9 @@
     background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
     cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,.45);
     opacity:0; pointer-events:none; transition:opacity .25s ease .4s, transform .2s ease;
+    transform:translateZ(60px);
   }
-  .book-close-btn:hover{ transform:scale(1.08); color:var(--jade-1); }
+  .book-close-btn:hover{ transform:translateZ(60px) scale(1.08); color:var(--jade-1); }
   .book-scene.stage-open .book-close-btn{ opacity:1; pointer-events:auto; }
   .book-close-btn svg{ width:14px; height:14px; }
 
@@ -1366,8 +1371,9 @@
     background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
     cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,.45);
     opacity:1; transition:transform .2s ease, color .2s ease;
+    transform:translateZ(60px);
   }
-  .book-back-btn:hover{ transform:scale(1.08); color:var(--jade-1); }
+  .book-back-btn:hover{ transform:translateZ(60px) scale(1.08); color:var(--jade-1); }
   .book-back-btn svg{ width:15px; height:15px; }
 
   @media (max-width:520px){
