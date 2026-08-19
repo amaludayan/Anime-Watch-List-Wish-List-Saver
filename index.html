@@ -1189,7 +1189,7 @@
 
   /* ---- Popped-out / opened book overlay — real 3D hinge-open book ---- */
   .book-overlay{
-    position:absolute; inset:0; z-index:6;
+    position:fixed; inset:0; z-index:90;
     display:flex; align-items:center; justify-content:center;
     padding:26px;
     background:color-mix(in srgb, var(--ink-0) 68%, transparent);
@@ -1684,9 +1684,12 @@
     <div class="subpanel-scroll shelf-scroll" id="shelfScroll">
       <div id="shelfRows"></div>
     </div>
-    <div class="book-overlay" id="bookOverlay"></div>
   </div>
 </div>
+<!-- Rendered as a fixed, viewport-level overlay (not nested inside the
+     bookshelf panel) so the opened book is never clipped by the panel's
+     own overflow:hidden / max-height / transform box. -->
+<div class="book-overlay" id="bookOverlay"></div>
 
 
 <!-- ============ SETTINGS / IMPORT-EXPORT OVERLAY ============ -->
