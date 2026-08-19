@@ -1175,7 +1175,7 @@
   .book-spine.selected-for-open{ transform:translateY(-10px) rotateY(-6deg); }
   .book-spine.selected-for-open .book-edge-glow{ opacity:1; }
 
-  /* ---- Popped-out / opened book overlay ---- */
+  /* ---- Popped-out / opened book overlay — real 3D hinge-open book ---- */
   .book-overlay{
     position:absolute; inset:0; z-index:6;
     display:flex; align-items:center; justify-content:center;
@@ -1184,79 +1184,145 @@
     backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
     opacity:0; pointer-events:none;
     transition:opacity .35s ease;
+    perspective:1900px;
   }
   .book-overlay.show{ opacity:1; pointer-events:auto; }
 
-  .book-pop{
+  .book-scene{
     position:relative;
-    width:min(72vw,220px);
-    aspect-ratio:2/3;
-    background:var(--ink-2);
-    border:1px solid var(--line-1);
-    box-shadow:0 30px 60px rgba(0,0,0,.55);
-    overflow:hidden;
-    transform:scale(.92) translateY(10px);
+    width:min(70vw,214px); height:calc(min(70vw,214px) * 1.5);
+    transform-style:preserve-3d;
+    transform:scale(.85) translateY(16px) rotateX(4deg) rotateY(-22deg);
     opacity:0;
-    transition:transform .45s cubic-bezier(.22,.61,.36,1), opacity .35s ease, width .45s cubic-bezier(.22,.61,.36,1), height .45s cubic-bezier(.22,.61,.36,1), aspect-ratio .45s cubic-bezier(.22,.61,.36,1);
+    transition:transform .55s cubic-bezier(.22,.61,.36,1), opacity .4s ease,
+               width .6s cubic-bezier(.22,.61,.36,1), height .6s cubic-bezier(.22,.61,.36,1);
+  }
+  .book-overlay.show .book-scene{ opacity:1; transform:scale(1) translateY(0) rotateX(4deg) rotateY(-22deg); }
+  .book-scene.stage-open{
+    width:min(92vw,640px);
+    height:min(82vh,82dvh);
+    max-height:620px;
+    transform:scale(1) translateY(0) rotateX(2deg) rotateY(0deg);
+  }
+
+  /* ground contact shadow, grows as the book pops toward the viewer */
+  .book-scene::after{
+    content:"";
+    position:absolute; left:6%; right:6%; bottom:-22px; height:26px;
+    background:radial-gradient(ellipse at center, rgba(0,0,0,.55) 0%, transparent 72%);
+    transform:translateZ(-40px);
+    opacity:.5;
+    transition:opacity .4s ease;
+  }
+  .book-scene.stage-open::after{ opacity:.28; bottom:-10px; }
+
+  /* the open pages, sitting flat beneath the hinged cover */
+  .book-pageblock{
+    position:absolute; inset:0;
+    background:#efe9db;
+    border-radius:1px 3px 3px 1px;
+    box-shadow:inset -8px 0 18px rgba(0,0,0,.14), 0 26px 54px rgba(0,0,0,.5);
+    display:flex; overflow:hidden;
+    opacity:0; transform:translateZ(-2px);
+    transition:opacity .35s ease .25s;
+  }
+  .book-scene.stage-open .book-pageblock{ opacity:1; }
+  /* soft crease down the gutter where the pages meet */
+  .book-pageblock::before{
+    content:""; position:absolute; top:0; bottom:0; left:50%; width:26px; margin-left:-13px;
+    background:linear-gradient(90deg, transparent, rgba(0,0,0,.12) 48%, rgba(0,0,0,.12) 52%, transparent);
+    pointer-events:none; z-index:2;
+  }
+
+  .book-page-left, .book-page-right{
+    flex:1; min-width:0; height:100%;
+    position:relative;
+    background:#f6f2ea;
+    display:flex; flex-direction:column;
+  }
+  .book-page-left{ box-shadow:inset -14px 0 20px -14px rgba(0,0,0,.22); }
+  .book-page-right{ box-shadow:inset 14px 0 20px -14px rgba(0,0,0,.14); }
+
+  .book-page-left img{ flex:1; min-height:0; width:100%; object-fit:cover; display:block; filter:saturate(.96); }
+  .book-page-left .bp-page-title{
+    padding:14px 14px 16px; font-family:var(--font-display); font-size:15px; line-height:1.35;
+    color:#242220; border-top:1px solid rgba(0,0,0,.08); background:#f6f2ea; flex:none;
+  }
+
+  .bp-page-right-scroll{ flex:1; min-height:0; overflow-y:auto; padding:20px 20px 16px; color:#242220; }
+  .book-page-right .section-label{
+    font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--jade-0); margin-bottom:8px; display:block;
+  }
+  .book-page-right .bp-meta-row{ display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:18px; font-family:var(--font-mono); font-size:11.5px; color:#7a7468; }
+  .book-page-right .bp-meta-row span b{ color:#242220; font-weight:600; }
+  .book-page-right .bp-notes-block{ font-size:13px; line-height:1.7; color:#3a352f; white-space:pre-line; margin-bottom:18px; }
+  .book-page-right .bp-notes-block.empty{ color:#a39c8c; font-style:italic; }
+  .book-page-actions{ display:flex; gap:8px; padding:12px 20px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid rgba(0,0,0,.08); flex:none; background:#f6f2ea; }
+
+  /* the cover — a true 3D hinge on the spine (left edge), flips open like a real book */
+  .book-cover-face{
+    position:absolute; inset:0;
+    transform-style:preserve-3d;
+    transform-origin:0% 50%;
+    transform:rotateY(0deg);
+    transition:transform .9s cubic-bezier(.6,.04,.26,1);
+    z-index:3;
     cursor:pointer;
   }
-  .book-overlay.show .book-pop{ transform:scale(1) translateY(0); opacity:1; }
-  .book-pop img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .book-pop .bp-cover-info{
+  .book-scene.stage-open .book-cover-face{ transform:rotateY(-172deg); cursor:default; }
+
+  .book-cover-front, .book-cover-back{
+    position:absolute; inset:0;
+    -webkit-backface-visibility:hidden; backface-visibility:hidden;
+    border-radius:1px 3px 3px 1px;
+    overflow:hidden;
+  }
+  .book-cover-front{
+    background:var(--ink-2);
+    box-shadow:0 1px 0 rgba(255,255,255,.06) inset, -4px 0 0 rgba(0,0,0,.18) inset, 0 26px 54px rgba(0,0,0,.55);
+  }
+  .book-cover-front img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .book-cover-front .bp-cover-info{
     position:absolute; left:0; right:0; bottom:0;
     padding:16px 14px 14px;
     background:linear-gradient(0deg, rgba(10,11,12,.92), rgba(10,11,12,0));
   }
-  .book-pop .bp-cover-info h4{ font-family:var(--font-display); font-size:15px; line-height:1.3; margin:0 0 4px; color:var(--paper); }
-  .book-pop .bp-cover-info .bp-meta{ font-family:var(--font-mono); font-size:10px; color:var(--ink-text-dim); letter-spacing:.05em; }
-  .book-pop .bp-hint{
+  .book-cover-front .bp-cover-info h4{ font-family:var(--font-display); font-size:15px; line-height:1.3; margin:0 0 4px; color:var(--paper); }
+  .book-cover-front .bp-cover-info .bp-meta{ font-family:var(--font-mono); font-size:10px; color:var(--ink-text-dim); letter-spacing:.05em; }
+  .book-cover-front .bp-hint{
     position:absolute; top:10px; right:10px;
     font-family:var(--font-mono); font-size:9px; letter-spacing:.08em; text-transform:uppercase;
     color:var(--ink-text); background:rgba(10,11,12,.6); border:1px solid var(--line-1);
-    padding:4px 8px;
+    padding:4px 8px; opacity:1; transition:opacity .2s ease;
+  }
+  .book-scene.stage-open .book-cover-front .bp-hint{ opacity:0; }
+  .book-cover-back{
+    transform:rotateY(180deg);
+    background:linear-gradient(120deg,#2a2e33,#1b1e22);
+  }
+  .book-cover-back::after{
+    content:""; position:absolute; inset:14px; border:1px solid rgba(233,228,218,.14);
   }
 
-  /* opened (detail) state — clean split panel, no skeuomorphic page-flip */
-  .book-pop.open-stage{
-    width:min(92vw,600px); aspect-ratio:auto; height:min(84vh,84dvh);
-    max-height:640px;
-    display:flex; cursor:default;
-  }
-  .book-pop.open-stage .bp-page-left{
-    flex:0 0 38%; position:relative; background:var(--ink-1); border-right:1px solid var(--line-1);
-    display:flex; flex-direction:column;
-  }
-  .book-pop.open-stage .bp-page-left img{ flex:1; min-height:0; object-fit:cover; }
-  .book-pop.open-stage .bp-page-left .bp-page-title{
-    padding:12px 12px 14px; font-family:var(--font-display); font-size:14px; line-height:1.3;
-    border-top:1px solid var(--line-1); flex:none;
-  }
-  .book-pop.open-stage .bp-page-right{
-    flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden;
-  }
-  .bp-page-right-scroll{ flex:1; min-height:0; overflow-y:auto; padding:18px 18px 16px; }
-  .bp-page-right .section-label{
-    font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
-    color:var(--sandal-0); margin-bottom:8px; display:block;
-  }
-  .bp-meta-row{ display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:18px; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-text-dim); }
-  .bp-meta-row span b{ color:var(--ink-text); font-weight:500; }
-  .bp-notes-block{ font-size:13px; line-height:1.7; color:var(--ink-text); white-space:pre-line; margin-bottom:18px; }
-  .bp-notes-block.empty{ color:var(--ink-text-dim); font-style:italic; }
-  .bp-page-actions{ display:flex; gap:8px; padding:12px 18px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--line-1); flex:none; }
   .book-close-btn{
     position:absolute; top:-14px; right:-14px; z-index:7;
     width:32px; height:32px; border-radius:50%;
     display:grid; place-items:center;
     background:var(--ink-2); border:1px solid var(--line-1); color:var(--ink-text);
     cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.4);
+    opacity:0; pointer-events:none; transition:opacity .25s ease .35s;
   }
+  .book-scene.stage-open .book-close-btn{ opacity:1; pointer-events:auto; }
   .book-close-btn svg{ width:14px; height:14px; }
+
   @media (max-width:520px){
-    .book-pop.open-stage{ flex-direction:column; width:min(92vw,420px); }
-    .book-pop.open-stage .bp-page-left{ flex:0 0 130px; flex-direction:row; border-right:none; border-bottom:1px solid var(--line-1); }
-    .book-pop.open-stage .bp-page-left img{ width:90px; flex:none; }
-    .book-pop.open-stage .bp-page-left .bp-page-title{ border-top:none; align-self:center; }
+    .book-scene.stage-open{ width:min(92vw,420px); }
+    .book-pageblock{ flex-direction:column; }
+    .book-pageblock::before{ top:50%; left:0; right:0; bottom:auto; width:auto; height:20px; margin:-10px 0 0; background:linear-gradient(180deg, transparent, rgba(0,0,0,.12) 48%, rgba(0,0,0,.12) 52%, transparent); }
+    .book-page-left{ flex:0 0 150px; flex-direction:row; box-shadow:inset 0 -14px 20px -14px rgba(0,0,0,.22); }
+    .book-page-left img{ width:110px; flex:none; height:100%; }
+    .book-page-left .bp-page-title{ border-top:none; align-self:center; }
   }
 
   /* ============ SETTINGS / IMPORT-EXPORT ============ */
@@ -2749,29 +2815,16 @@
     const entry = lists.wish[openBookId];
     if (!entry){ closeBookOverlay(true); return; }
     const meta = [formatLabel(entry.format), entry.year, entry.score ? `★ ${entry.score}` : null].filter(Boolean).join(' · ');
+    const isOpen = openBookStage === 'open';
 
-    if (openBookStage === 'cover'){
-      bookOverlay.innerHTML = `
-        <div class="book-pop" id="bookPop">
-          ${entry.img ? `<img src="${entry.img}" alt="${escapeHtml(entry.title)}">` : ''}
-          <span class="bp-hint">Tap to open</span>
-          <div class="bp-cover-info">
-            <h4>${escapeHtml(entry.title)}</h4>
-            <div class="bp-meta">${escapeHtml(meta)}</div>
-          </div>
-        </div>`;
-      bookOverlay.classList.add('show');
-      document.getElementById('bookPop').addEventListener('click', () => handleBookTap(openBookId));
-      bookOverlay.onclick = (e) => { if (e.target === bookOverlay) closeBookOverlay(); };
-    } else {
-      bookOverlay.innerHTML = `
-        <div class="book-pop open-stage" id="bookPop">
-          <button class="book-close-btn" id="bookOverlayClose" aria-label="Close"><i data-lucide="x"></i></button>
-          <div class="bp-page-left">
+    bookOverlay.innerHTML = `
+      <div class="book-scene ${isOpen ? 'stage-open' : ''}" id="bookPop">
+        <div class="book-pageblock">
+          <div class="book-page-left">
             ${entry.img ? `<img src="${entry.img}" alt="${escapeHtml(entry.title)}">` : ''}
             <div class="bp-page-title">${escapeHtml(entry.title)}</div>
           </div>
-          <div class="bp-page-right">
+          <div class="book-page-right">
             <div class="bp-page-right-scroll">
               <span class="section-label">Details</span>
               <div class="bp-meta-row">
@@ -2782,15 +2835,35 @@
               <span class="section-label">Personal Notes</span>
               <div class="bp-notes-block ${entry.notes ? '' : 'empty'}">${entry.notes ? escapeHtml(entry.notes) : 'No notes yet for this title.'}</div>
             </div>
-            <div class="bp-page-actions">
+            <div class="book-page-actions">
               <button class="btn-ghost" id="bookEditNotesBtn">Edit Notes</button>
               <button class="btn-solid" id="bookFullRecordBtn">Full Record</button>
             </div>
           </div>
-        </div>`;
-      bookOverlay.classList.add('show');
-      renderIcons();
-      document.getElementById('bookOverlayClose').addEventListener('click', () => closeBookOverlay());
+        </div>
+        <div class="book-cover-face" id="bookCoverFace">
+          <div class="book-cover-front">
+            ${entry.img ? `<img src="${entry.img}" alt="${escapeHtml(entry.title)}">` : ''}
+            <span class="bp-hint">Tap to open</span>
+            <div class="bp-cover-info">
+              <h4>${escapeHtml(entry.title)}</h4>
+              <div class="bp-meta">${escapeHtml(meta)}</div>
+            </div>
+          </div>
+          <div class="book-cover-back"></div>
+        </div>
+        <button class="book-close-btn" id="bookOverlayClose" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>`;
+    bookOverlay.classList.add('show');
+    renderIcons();
+
+    document.getElementById('bookCoverFace').addEventListener('click', () => {
+      if (openBookStage === 'cover') handleBookTap(openBookId);
+    });
+    document.getElementById('bookOverlayClose').addEventListener('click', () => closeBookOverlay());
+    bookOverlay.onclick = (e) => { if (e.target === bookOverlay) closeBookOverlay(); };
+
+    if (isOpen){
       document.getElementById('bookEditNotesBtn').addEventListener('click', () => {
         const updated = prompt('Edit your notes for "' + entry.title + '":', entry.notes || '');
         if (updated === null) return;
@@ -2802,7 +2875,6 @@
         closeShelf();
         openModal(openBookId);
       });
-      bookOverlay.onclick = (e) => { if (e.target === bookOverlay) closeBookOverlay(); };
     }
   }
 
