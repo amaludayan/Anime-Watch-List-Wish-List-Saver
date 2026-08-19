@@ -1095,11 +1095,19 @@
 
   .shelf-unit{ padding:0 20px; margin-bottom:2px; }
   .shelf-books{
-    display:flex; align-items:flex-end; justify-content:flex-start;
-    gap:0; flex-wrap:wrap;
+    position:relative;
     padding:14px 4px 34px;
     min-height:180px;
-    perspective:1000px;
+    perspective:1400px;
+  }
+  /* the whole assembly rotates together on the Y-axis, so every book's
+     front cover AND right-hand page edge read in one consistent 3/4 view */
+  .shelf-books-stage{
+    position:relative;
+    height:144px;
+    transform-style:preserve-3d;
+    transform:rotateY(-35deg);
+    transition:transform .5s cubic-bezier(.22,.61,.36,1);
   }
   .shelf-plank{
     height:2px; margin:0 22px 30px;
@@ -1109,22 +1117,24 @@
   .shelf-unit:first-child .shelf-books{ padding-top:16px; }
 
   /* Real 3D book — front cover + page-block edge + spine edge, built as
-     true CSS-3D faces (not a flat illusion) so it reads as an object. */
+     true CSS-3D faces (not a flat illusion) so it reads as an object.
+     Each book is offset from the last by a fixed step to the right (X)
+     and pushed back by one book-thickness (Z), so book 2 sits directly
+     behind book 1, book 3 behind book 2, etc — a staggered, receding
+     stack rather than a flat row. --i is set inline per book. */
   .book-spine{
-    position:relative;
-    width:92px; height:144px; flex:none;
-    margin-left:-20px; /* packed side-by-side like real books on a shelf */
+    --i:0;
+    --book-thickness:24px;
+    --book-step-x:26px;
+    position:absolute;
+    left:0; bottom:0;
+    width:92px; height:144px;
     cursor:pointer;
     transform-style:preserve-3d;
-    transform:rotateY(-22deg) rotateZ(-3deg);
-    transform-origin:50% 100%; /* leans from where it stands on the shelf */
+    transform:translateX(calc(var(--i) * var(--book-step-x))) translateZ(calc(var(--i) * var(--book-thickness) * -1));
     transition:transform .4s cubic-bezier(.22,.61,.36,1);
     will-change:transform;
-    z-index:1;
   }
-  .book-spine:nth-child(even){ transform:rotateY(-22deg) rotateZ(3deg); }
-  .book-spine:nth-child(3n){ transform:rotateY(-22deg) rotateZ(-5deg); }
-  .book-spine:first-child{ margin-left:0; }
   .book-spine .b-front{
     position:absolute; inset:0;
     border-radius:1px 3px 3px 1px;
@@ -1181,19 +1191,21 @@
     transform:translateZ(-2px);
   }
   .book-spine:hover{
-    transform:translateY(-12px) scale(1.08) rotateY(0deg) rotateZ(0deg);
+    transform:translateX(calc(var(--i) * var(--book-step-x))) translateZ(calc(var(--i) * var(--book-thickness) * -1 + 46px)) translateY(-10px) scale(1.06);
     z-index:5;
   }
   .book-spine:hover .b-front{ box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 30px 46px -6px rgba(0,0,0,.65); }
   .book-spine:hover::after{ opacity:.4; }
   .book-spine:hover .b-edge-glow{ opacity:1; }
-  /* books stacked after the hovered one slide right to clear space and
-     reveal it fully, like fanning through a real packed shelf */
-  .book-spine:hover ~ .book-spine{ transform:translateX(34px) rotateY(-22deg) rotateZ(-3deg); }
-  .book-spine.editing-mode:hover{ transform:rotateY(-22deg) rotateZ(-3deg); z-index:1; }
-  .book-spine.editing-mode:hover ~ .book-spine{ transform:rotateY(-22deg) rotateZ(-3deg); }
+  .book-spine.editing-mode:hover{
+    transform:translateX(calc(var(--i) * var(--book-step-x))) translateZ(calc(var(--i) * var(--book-thickness) * -1));
+    z-index:1;
+  }
   .book-spine.editing-mode:hover .b-front{ box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 22px 34px -6px rgba(0,0,0,.6); }
-  .book-spine.selected-for-open{ transform:translateY(-12px) scale(1.08) rotateY(0deg) rotateZ(0deg); z-index:5; }
+  .book-spine.selected-for-open{
+    transform:translateX(calc(var(--i) * var(--book-step-x))) translateZ(calc(var(--i) * var(--book-thickness) * -1 + 46px)) translateY(-10px) scale(1.06);
+    z-index:5;
+  }
   .book-spine.selected-for-open .b-edge-glow{ opacity:1; }
   .book-spine.hidden-for-open{ opacity:0; pointer-events:none; }
   /* the delete badge must sit in front of the extruded 3D cover face, not
@@ -2839,10 +2851,10 @@
     let html = '';
     for (let i = 0; i < entries.length; i += BOOKS_PER_SHELF){
       const chunk = entries.slice(i, i + BOOKS_PER_SHELF);
-      html += `<div class="shelf-unit"><div class="shelf-books">`;
-      html += chunk.map((e) => {
+      html += `<div class="shelf-unit"><div class="shelf-books"><div class="shelf-books-stage">`;
+      html += chunk.map((e, idx) => {
         return `
-          <div class="book-spine ${shelfEditing ? 'editing-mode' : ''} ${openBookId === e.id ? 'selected-for-open' : ''}" data-id="${e.id}">
+          <div class="book-spine ${shelfEditing ? 'editing-mode' : ''} ${openBookId === e.id ? 'selected-for-open' : ''}" data-id="${e.id}" style="--i:${idx}">
             ${shelfEditing ? `<button class="lv-delete-badge" data-remove-id="${e.id}" aria-label="Delete"><i data-lucide="x"></i></button>` : ''}
             <div class="b-top"></div>
             <div class="b-pages"></div>
@@ -2854,7 +2866,7 @@
             </div>
           </div>`;
       }).join('');
-      html += `</div><div class="shelf-plank"></div></div>`;
+      html += `</div></div><div class="shelf-plank"></div></div>`;
     }
     shelfRows.innerHTML = html;
 
