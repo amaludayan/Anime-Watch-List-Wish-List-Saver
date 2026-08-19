@@ -915,9 +915,9 @@
   document.addEventListener('keydown', e => { if(e.key === 'Escape') closeDrawers(); });
 
   // ==================================================================
-  // ---- Jikan API integration (https://api.jikan.moe/v4) ----
+  // ---- AniList API integration (https://graphql.anilist.co) ----
   // ==================================================================
-  const JIKAN_BASE = 'https://api.jikan.moe/v4';
+  const ANILIST_BASE = 'https://graphql.anilist.co';
 
   const animeGrid   = document.getElementById('animeGrid');
   const paginationEl= document.getElementById('pagination');
@@ -938,16 +938,28 @@
     requestToken: 0    // guards against out-of-order responses
   };
 
-  // Jikan is rate-limited (~3 req/s, 60/min) — a tiny request queue keeps
-  // rapid pagination/search/genre clicks from tripping 429s.
+  // AniList is rate-limited (~30 req/min) — a tiny request queue keeps
+  // rapid pagination/search/genre clicks from tripping 429s, and a single
+  // retry honours the Retry-After header if we do get throttled.
   let queueTail = Promise.resolve();
-  function throttledFetch(url){
-    const run = () => fetch(url).then(r => {
-      if (!r.ok) throw new Error('Jikan request failed: ' + r.status);
+  function gqlFetch(query, variables){
+    const run = () => fetch(ANILIST_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query, variables })
+    }).then(r => {
+      if (r.status === 429){
+        const retryAfter = Number(r.headers.get('Retry-After')) || 2;
+        return new Promise(res => setTimeout(res, retryAfter * 1000)).then(() => run());
+      }
+      if (!r.ok) throw new Error('AniList request failed: ' + r.status);
       return r.json();
+    }).then(json => {
+      if (json.errors?.length) throw new Error(json.errors[0]?.message || 'AniList query error');
+      return json.data;
     });
     const result = queueTail.then(run, run);
-    queueTail = result.then(() => new Promise(res => setTimeout(res, 360)), () => new Promise(res => setTimeout(res, 360)));
+    queueTail = result.then(() => new Promise(res => setTimeout(res, 550)), () => new Promise(res => setTimeout(res, 550)));
     return result;
   }
 
@@ -972,6 +984,11 @@
     renderIcons();
   }
 
+  function formatLabel(v){
+    if (!v) return '';
+    return String(v).replace(/_/g, ' ').replace(/\w\S*/g, w => w[0] + w.slice(1).toLowerCase());
+  }
+
   function escapeHtml(str){
     return String(str ?? '').replace(/[&<>"']/g, c => ({
       '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
@@ -984,12 +1001,12 @@
       return;
     }
     animeGrid.innerHTML = list.map((anime, i) => {
-      const title = escapeHtml(anime.title_english || anime.title || 'Untitled');
-      const img = anime.images?.webp?.large_image_url || anime.images?.jpg?.large_image_url || '';
-      const score = anime.score ? anime.score.toFixed(1) : null;
-      const meta = [anime.type, anime.year].filter(Boolean).join(' · ');
+      const title = escapeHtml(anime.title?.english || anime.title?.userPreferred || anime.title?.romaji || 'Untitled');
+      const img = anime.coverImage?.large || anime.coverImage?.extraLarge || '';
+      const score = anime.averageScore ? (anime.averageScore / 10).toFixed(1) : null;
+      const meta = [formatLabel(anime.format), anime.seasonYear || anime.startDate?.year].filter(Boolean).join(' · ');
       return `
-        <button class="anime-card" data-id="${anime.mal_id}" type="button"
+        <button class="anime-card" data-id="${anime.id}" type="button"
            style="animation-delay:${Math.min(i, 12) * 35}ms">
           <div class="poster">
             ${img ? `<img src="${img}" alt="${title}" loading="lazy">` : ''}
@@ -1035,25 +1052,36 @@
     animeGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function buildUrl(){
-    const params = new URLSearchParams();
-    params.set('page', state.page);
-    params.set('limit', '18');
-    params.set('sfw', 'true');
+  const LIST_QUERY = `
+    query ($page: Int, $perPage: Int, $search: String, $genre: String, $sort: [MediaSort]) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo { currentPage lastPage hasNextPage total }
+        media(type: ANIME, search: $search, genre: $genre, sort: $sort, isAdult: false) {
+          id
+          title { romaji english userPreferred }
+          coverImage { large extraLarge }
+          averageScore
+          format
+          seasonYear
+          startDate { year }
+        }
+      }
+    }`;
+
+  function buildQuery(){
+    const variables = { page: state.page, perPage: 18 };
 
     if (state.mode === 'search'){
-      params.set('q', state.query);
-      params.set('order_by', 'popularity');
-      return `${JIKAN_BASE}/anime?${params.toString()}`;
+      variables.search = state.query;
+      variables.sort = ['SEARCH_MATCH'];
+    } else if (state.mode === 'genre'){
+      variables.genre = state.genreId;
+      variables.sort = ['POPULARITY_DESC'];
+    } else {
+      // default: top/popular anime
+      variables.sort = ['POPULARITY_DESC'];
     }
-    if (state.mode === 'genre'){
-      params.set('genres', state.genreId);
-      params.set('order_by', 'popularity');
-      return `${JIKAN_BASE}/anime?${params.toString()}`;
-    }
-    // default: top/popular anime
-    params.set('filter', 'bypopularity');
-    return `${JIKAN_BASE}/top/anime?${params.toString()}`;
+    return { query: LIST_QUERY, variables };
   }
 
   function updateResultsLabel(){
@@ -1068,11 +1096,12 @@
     renderSkeletons();
 
     try {
-      const data = await throttledFetch(buildUrl());
+      const { query, variables } = buildQuery();
+      const data = await gqlFetch(query, variables);
       if (token !== state.requestToken) return; // a newer request superseded this one
 
-      renderCards(data.data);
-      state.lastPage = data.pagination?.last_visible_page || 1;
+      renderCards(data.Page?.media);
+      state.lastPage = data.Page?.pageInfo?.lastPage || 1;
       renderPagination();
     } catch (err){
       if (token !== state.requestToken) return;
@@ -1105,24 +1134,19 @@
   // ---- Genre overlay ----
   async function loadGenres(){
     try {
-      const data = await throttledFetch(`${JIKAN_BASE}/genres/anime`);
-      const genres = (data.data || [])
-        .filter(g => g.count > 0)
-        .sort((a,b) => b.count - a.count)
-        .slice(0, 24)
-        .sort((a,b) => a.name.localeCompare(b.name));
+      const data = await gqlFetch(`query { GenreCollection }`);
+      const genres = [...(data.GenreCollection || [])].sort((a,b) => a.localeCompare(b));
 
-      genreList.innerHTML = genres.map(g => `
-        <button class="genre-item" data-id="${g.mal_id}" data-name="${escapeHtml(g.name)}">
-          <span>${escapeHtml(g.name)}</span>
-          <span class="count">${g.count}</span>
+      genreList.innerHTML = genres.map(name => `
+        <button class="genre-item" data-name="${escapeHtml(name)}">
+          <span>${escapeHtml(name)}</span>
         </button>`).join('');
 
       genreList.querySelectorAll('.genre-item').forEach(btn => {
         btn.addEventListener('click', () => {
           genreList.querySelectorAll('.genre-item').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          selectGenre(Number(btn.dataset.id), btn.dataset.name);
+          selectGenre(btn.dataset.name, btn.dataset.name);
         });
       });
     } catch (err){
@@ -1166,6 +1190,31 @@
   let modalToken = 0;
   let lastFocused = null;
 
+  const DETAIL_QUERY = `
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        title { romaji english native userPreferred }
+        coverImage { extraLarge large }
+        genres
+        averageScore
+        popularity
+        favourites
+        episodes
+        duration
+        status
+        format
+        source
+        startDate { year month day }
+        endDate { year month day }
+        studios { edges { isMain node { name } } }
+        description(asHtml: false)
+        trailer { id site }
+        siteUrl
+        rankings { rank type context allTime }
+      }
+    }`;
+
   function openModal(id){
     modalToken++;
     const token = modalToken;
@@ -1181,10 +1230,10 @@
     requestAnimationFrame(() => modalBackdrop.classList.add('open'));
     modalClose.focus({ preventScroll: true });
 
-    throttledFetch(`${JIKAN_BASE}/anime/${id}/full`)
+    gqlFetch(DETAIL_QUERY, { id })
       .then(data => {
         if (token !== modalToken) return;
-        renderModal(data.data);
+        renderModal(data.Media);
       })
       .catch(err => {
         if (token !== modalToken) return;
@@ -1229,20 +1278,32 @@
       </div>`;
   }
 
+  function dateLabel(d){
+    if (!d || !d.year) return null;
+    const parts = [d.year];
+    if (d.month) parts.unshift(String(d.day || '').padStart(2,'0'));
+    return [d.day, d.month, d.year].filter(Boolean).join('-') || String(d.year);
+  }
+
   function renderModal(a){
-    const title = escapeHtml(a.title_english || a.title || 'Untitled');
-    const jpTitle = a.title_japanese ? escapeHtml(a.title_japanese) : '';
-    const img = a.images?.webp?.large_image_url || a.images?.jpg?.large_image_url || '';
-    const genres = [...(a.genres||[]), ...(a.themes||[]), ...(a.demographics||[])].map(g => g.name);
-    const studios = (a.studios||[]).map(s => s.name).join(', ') || '—';
-    const producers = (a.producers||[]).map(s => s.name).join(', ') || '—';
-    const score = a.score ? a.score.toFixed(2) : '—';
-    const rank = a.rank ? `#${a.rank}` : '—';
-    const popularity = a.popularity ? `#${a.popularity}` : '—';
-    const members = a.members ? a.members.toLocaleString() : '—';
-    const aired = a.aired?.string || '—';
-    const synopsis = a.synopsis ? escapeHtml(a.synopsis) : 'No synopsis available for this title yet.';
-    const ytId = a.trailer?.youtube_id || '';
+    const title = escapeHtml(a.title?.english || a.title?.userPreferred || a.title?.romaji || 'Untitled');
+    const jpTitle = a.title?.native ? escapeHtml(a.title.native) : '';
+    const img = a.coverImage?.extraLarge || a.coverImage?.large || '';
+    const genres = a.genres || [];
+    const studioEdges = a.studios?.edges || [];
+    const studios = studioEdges.filter(e => e.isMain).map(e => e.node.name).join(', ') || '—';
+    const producers = studioEdges.filter(e => !e.isMain).map(e => e.node.name).join(', ') || '—';
+    const score = a.averageScore ? (a.averageScore / 10).toFixed(2) : '—';
+    const ratedRank = (a.rankings || []).find(r => r.type === 'RATED' && r.allTime);
+    const popularRank = (a.rankings || []).find(r => r.type === 'POPULAR' && r.allTime);
+    const rank = ratedRank ? `#${ratedRank.rank}` : '—';
+    const popularity = popularRank ? `#${popularRank.rank}` : (a.popularity ? a.popularity.toLocaleString() : '—');
+    const favorites = a.favourites ? a.favourites.toLocaleString() : '—';
+    const startLabel = dateLabel(a.startDate);
+    const endLabel = dateLabel(a.endDate);
+    const aired = startLabel ? (endLabel && endLabel !== startLabel ? `${startLabel} to ${endLabel}` : startLabel) : '—';
+    const synopsis = a.description ? escapeHtml(a.description.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')) : 'No synopsis available for this title yet.';
+    const ytId = a.trailer?.site === 'youtube' ? a.trailer.id : '';
 
     modalScroll.innerHTML = `
       <div class="modal-hero">
@@ -1258,7 +1319,7 @@
             <div class="stat"><span class="label">Score</span><span class="value jade">${score}</span></div>
             <div class="stat"><span class="label">Rank</span><span class="value">${rank}</span></div>
             <div class="stat"><span class="label">Episodes</span><span class="value">${a.episodes ?? '—'}</span></div>
-            <div class="stat"><span class="label">Status</span><span class="value">${escapeHtml(a.status || '—')}</span></div>
+            <div class="stat"><span class="label">Status</span><span class="value">${escapeHtml(formatLabel(a.status) || '—')}</span></div>
           </div>
         </div>
       </div>
@@ -1274,24 +1335,22 @@
         <div class="modal-section">
           <div class="section-label">Details</div>
           <div class="info-grid">
-            <div class="info-row"><span class="k">Type</span><span class="v">${escapeHtml(a.type || '—')}</span></div>
+            <div class="info-row"><span class="k">Type</span><span class="v">${escapeHtml(formatLabel(a.format) || '—')}</span></div>
             <div class="info-row"><span class="k">Aired</span><span class="v">${escapeHtml(aired)}</span></div>
             <div class="info-row"><span class="k">Studios</span><span class="v">${escapeHtml(studios)}</span></div>
             <div class="info-row"><span class="k">Producers</span><span class="v">${escapeHtml(producers)}</span></div>
-            <div class="info-row"><span class="k">Source</span><span class="v">${escapeHtml(a.source || '—')}</span></div>
-            <div class="info-row"><span class="k">Duration</span><span class="v">${escapeHtml(a.duration || '—')}</span></div>
-            <div class="info-row"><span class="k">Rating</span><span class="v">${escapeHtml(a.rating || '—')}</span></div>
+            <div class="info-row"><span class="k">Source</span><span class="v">${escapeHtml(formatLabel(a.source) || '—')}</span></div>
+            <div class="info-row"><span class="k">Duration</span><span class="v">${a.duration ? a.duration + ' min' : '—'}</span></div>
             <div class="info-row"><span class="k">Popularity</span><span class="v">${popularity}</span></div>
-            <div class="info-row"><span class="k">Members</span><span class="v">${members}</span></div>
-            <div class="info-row"><span class="k">Favorites</span><span class="v">${a.favorites ? a.favorites.toLocaleString() : '—'}</span></div>
+            <div class="info-row"><span class="k">Favorites</span><span class="v">${favorites}</span></div>
           </div>
         </div>
 
-        ${a.url ? `
+        ${a.siteUrl ? `
         <div class="modal-section">
           <div class="section-label">Reference</div>
-          <a href="${a.url}" target="_blank" rel="noopener" style="color:var(--jade-1); font-size:12.5px; text-decoration:underline; text-underline-offset:3px;">
-            View full record on MyAnimeList ↗
+          <a href="${a.siteUrl}" target="_blank" rel="noopener" style="color:var(--jade-1); font-size:12.5px; text-decoration:underline; text-underline-offset:3px;">
+            View full record on AniList ↗
           </a>
         </div>` : ''}
       </div>
