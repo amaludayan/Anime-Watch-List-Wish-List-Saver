@@ -287,13 +287,21 @@
     color:var(--ink-text-dim);
   }
 
-  /* frame rectangle below the percentage */
+  /* frame rectangle behind the percentage number, no fill */
+  .pct-num-wrap{
+    position:relative;
+    display:inline-flex; align-items:center; justify-content:center;
+    padding:4px 0;
+  }
   .pct-frame{
-    margin-top:14px;
-    width:150px; height:26px;
+    position:absolute;
+    left:50%; top:50%;
+    transform:translate(-50%,-50%);
+    width:52%; height:170%;
+    min-width:34px;
     border:1.5px solid rgba(207,192,163,.55);
     border-radius:2px;
-    position:relative; z-index:4;
+    z-index:-1;
   }
   .pct-frame::before,.pct-frame::after{
     content:""; position:absolute; top:-4px; width:6px; height:6px;
@@ -1645,11 +1653,12 @@
     </div>
 
     <div class="pct-row">
-      <span class="pct-num" id="pctNum">0%</span>
+      <div class="pct-num-wrap">
+        <span class="pct-frame"></span>
+        <span class="pct-num" id="pctNum">0%</span>
+      </div>
       <span class="pct-label">Loading Archive</span>
     </div>
-
-    <div class="pct-frame"></div>
 
     <div class="dot-grid" id="dotGrid">
       <span class="dg-tl"></span><span class="dg-tr"></span>
