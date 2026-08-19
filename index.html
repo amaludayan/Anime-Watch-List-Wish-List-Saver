@@ -78,6 +78,25 @@
     100%{ opacity:0; filter:blur(6px); pointer-events:none; }
   }
 
+  /* ---- Iris-out reveal: the intro opens like an After Effects iris wipe,
+     a soft-edged circle expanding from the centre outward ---- */
+  .iris-ring{
+    position:absolute; left:50%; top:50%;
+    width:0; height:0;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle, rgba(169,232,207,.45) 0%, rgba(169,232,207,.18) 45%, rgba(169,232,207,0) 72%);
+    opacity:.9;
+    pointer-events:none;
+    z-index:6;
+    animation:irisRingGrow 1.5s cubic-bezier(.65,0,.35,1) forwards;
+  }
+  @keyframes irisRingGrow{
+    0%{ width:0; height:0; opacity:.95; }
+    55%{ opacity:.5; }
+    100%{ width:220vmax; height:220vmax; opacity:0; }
+  }
+
   /* subtle sci-fi tech grid overlay */
   .tech-grid{
     position:absolute; inset:0;
@@ -141,6 +160,12 @@
   .intro-stack{
     position:relative; display:flex; flex-direction:column; align-items:center;
     gap:18px; z-index:2;
+    clip-path:circle(0% at 50% 50%);
+    animation:irisOutStack 1.5s cubic-bezier(.65,0,.35,1) forwards;
+  }
+  @keyframes irisOutStack{
+    0%{ clip-path:circle(0% at 50% 50%); }
+    100%{ clip-path:circle(85% at 50% 50%); }
   }
 
   .rune-top{
@@ -149,15 +174,16 @@
     letter-spacing:.4em;
     font-size:13px;
     color:var(--sandal-0);
-    opacity:.55;
+    opacity:0;
     margin-bottom:26px;
-    animation:runeFlicker 4s ease-in-out infinite;
+    animation:runeReveal .4s ease forwards 1.35s, runeFlicker 4s ease-in-out infinite 1.75s;
   }
+  @keyframes runeReveal{ to{ opacity:.55; } }
   @keyframes runeFlicker{
     0%,100%{ opacity:.55 } 50%{ opacity:.85 }
   }
 
-  /* jade band */
+  /* jade band — the first thing revealed, large rectangular green block */
   .jade-band{
     position:relative;
     width:min(92vw,760px);
@@ -165,6 +191,13 @@
     overflow:hidden;
     border-top:1px solid rgba(169,232,207,.25);
     border-bottom:1px solid rgba(169,232,207,.25);
+    opacity:0;
+    transform:scaleX(.7);
+    animation:bandReveal .45s cubic-bezier(.3,.6,.2,1) forwards .05s;
+  }
+  @keyframes bandReveal{
+    0%{ opacity:0; transform:scaleX(.7); }
+    100%{ opacity:1; transform:scaleX(1); }
   }
   .jade-band::before{
     content:"";
@@ -241,18 +274,24 @@
   .jade-mark.left-mark{ left:14%; width:26px; height:26px; }
   .jade-mark.right-mark{ left:86%; width:26px; height:26px; }
 
-  /* emblem */
+  /* emblem — no glow, clean mark, pops in after the band + glyph */
   .emblem-wrap{
     position:relative; margin-top:-46px; z-index:3;
     width:170px; height:170px;
     display:flex; align-items:center; justify-content:center;
-    filter:drop-shadow(0 0 18px rgba(169,232,207,.55)) drop-shadow(0 0 40px rgba(95,184,148,.25));
+    filter:none;
+    opacity:0;
+    animation:emblemPopIn .5s cubic-bezier(.3,.6,.2,1) forwards .95s, emblemGlitch 5.5s steps(1) infinite 3.4s;
+  }
+  @keyframes emblemPopIn{
+    0%{ opacity:0; transform:scale(.9); }
+    100%{ opacity:1; transform:scale(1); }
   }
   .emblem-wrap svg{ width:100%; height:100%; }
   .emblem-wrap img{
     width:100%; height:100%; object-fit:contain;
     opacity:0;
-    animation:emblemFadeIn 1.3s cubic-bezier(.3,.6,.2,1) forwards .15s, emberGlow 2.4s ease-in-out infinite 1.5s;
+    animation:emblemFadeIn 1.1s cubic-bezier(.3,.6,.2,1) forwards 1s;
   }
   @keyframes emblemFadeIn{
     0%{ opacity:0; transform:scale(.82); filter:blur(4px); }
@@ -266,23 +305,44 @@
     stroke-linejoin:round;
     stroke-dasharray:900;
     stroke-dashoffset:900;
-    animation:drawEmblem 2.6s cubic-bezier(.3,.6,.2,1) forwards .15s, emberGlow 2.4s ease-in-out infinite 2.4s;
+    animation:drawEmblem 2.6s cubic-bezier(.3,.6,.2,1) forwards 1s;
   }
   @keyframes drawEmblem{ to{ stroke-dashoffset:0; } }
-  @keyframes emberGlow{
-    0%,100%{ filter:drop-shadow(0 0 2px rgba(169,232,207,.4)); }
-    50%{ filter:drop-shadow(0 0 10px rgba(169,232,207,.9)); }
-  }
-  /* occasional glitch flicker on the emblem */
-  .emblem-wrap{
-    animation:emblemGlitch 5.5s steps(1) infinite 2.6s;
-  }
+  /* occasional flicker on the emblem — positional glitch only, no glow */
   @keyframes emblemGlitch{
-    0%,96%,100%{ transform:translate(0,0); opacity:1; filter:none; }
-    96.4%{ transform:translate(-2px,0); opacity:.7; filter:drop-shadow(2px 0 0 rgba(169,232,207,.6)) drop-shadow(-2px 0 0 rgba(232,169,169,.5)); }
-    96.8%{ transform:translate(2px,0); opacity:.9; filter:none; }
-    97.2%{ transform:translate(-1px,0); opacity:.6; filter:drop-shadow(-2px 0 0 rgba(169,232,207,.6)); }
-    97.6%{ transform:translate(0,0); opacity:1; filter:none; }
+    0%,96%,100%{ transform:translate(0,0); opacity:1; }
+    96.4%{ transform:translate(-2px,0); opacity:.8; }
+    96.8%{ transform:translate(2px,0); opacity:.92; }
+    97.2%{ transform:translate(-1px,0); opacity:.75; }
+    97.6%{ transform:translate(0,0); opacity:1; }
+  }
+
+  /* dissolving smoke/aura drifting off the logo — centre outward, 45° up-right */
+  .emblem-wrap::before,
+  .emblem-wrap::after{
+    content:"";
+    position:absolute;
+    left:50%; top:50%;
+    width:60%; height:60%;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(169,232,207,.5) 0%, rgba(169,232,207,.22) 40%, transparent 72%);
+    filter:blur(10px);
+    opacity:0;
+    pointer-events:none;
+    z-index:-1;
+    animation:smokeDissolve 3.6s ease-out infinite;
+  }
+  .emblem-wrap::before{ animation-delay:1.3s; }
+  .emblem-wrap::after{ width:40%; height:40%; animation-delay:2.5s; animation-duration:3.2s; }
+  @keyframes smokeDissolve{
+    0%{ opacity:0; transform:translate(-50%,-50%) translate(0,0) scale(.5); filter:blur(6px); }
+    12%{ opacity:.55; }
+    100%{
+      opacity:0;
+      /* drift up and to the right, along a 45° line, dissolving as it goes */
+      transform:translate(-50%,-50%) translate(120px,-120px) scale(2.2);
+      filter:blur(22px);
+    }
   }
 
   .pct-row{
@@ -290,7 +350,10 @@
     display:flex; flex-direction:column-reverse; align-items:center; gap:4px;
     font-family:var(--font-mono);
     position:relative; z-index:4;
+    opacity:0;
+    animation:restReveal .4s ease forwards 1.3s;
   }
+  @keyframes restReveal{ to{ opacity:1; } }
   .pct-num{
     font-size:22px; font-weight:700; letter-spacing:.05em;
     color:var(--paper);
@@ -323,7 +386,7 @@
   .pct-frame::before{ left:-1px; border-left:1.5px solid rgba(169,232,207,.8); }
   .pct-frame::after{ right:-1px; border-right:1.5px solid rgba(169,232,207,.8); }
 
-  /* big outline site-name glyph, spans from behind the emblem down to the dot grid */
+  /* big outline site-name glyph — appears suddenly right after the green band */
   .site-glyph{
     position:absolute;
     left:50%; top:40px;
@@ -337,12 +400,14 @@
     color:transparent;
     -webkit-text-stroke:1px rgba(255,255,255,.8);
     text-stroke:1px rgba(255,255,255,.8);
-    opacity:.85;
+    opacity:0;
     letter-spacing:0;
     pointer-events:none;
     user-select:none;
     z-index:1;
+    animation:glyphSnapIn .18s steps(1) forwards .5s;
   }
+  @keyframes glyphSnapIn{ to{ opacity:.85; } }
 
   .dot-grid{
     margin-top:18px;
@@ -354,6 +419,8 @@
       "bl br";
     gap:8px;
     position:relative; z-index:4;
+    opacity:0;
+    animation:restReveal .4s ease forwards 1.3s;
   }
   .dot-grid span{
     width:15px; height:15px;
@@ -377,6 +444,8 @@
     font-size:10px; letter-spacing:.15em;
     color:var(--ink-text-dim);
     display:flex; align-items:center; gap:8px;
+    opacity:0;
+    animation:restReveal .4s ease forwards 1.35s;
   }
   .baseline-glyphs .spark{ color:#b8544a; font-size:8px; }
 
@@ -1629,6 +1698,7 @@
 
   <div class="vignette"></div>
   <div class="center-hair"></div>
+  <div class="iris-ring" aria-hidden="true"></div>
 
   <svg class="glyph-wing left" viewBox="0 0 300 500" xmlns="http://www.w3.org/2000/svg" fill="none">
     <path d="M40 40 h60 v40 M100 60 v60 h50 M60 160 h120 M90 200 v90 M40 260 h200 M150 260 v140 M60 340 h60 v60 h-60z M180 360 h50 v70" stroke-width="1"/>
