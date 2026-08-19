@@ -1210,8 +1210,10 @@
                width .6s cubic-bezier(.22,.61,.36,1), height .6s cubic-bezier(.22,.61,.36,1);
   }
   .book-overlay.show .book-scene{ opacity:1; transform:translate(0,0) scale(1) rotateX(3deg) rotateY(-19deg); }
-  /* opened book sits perfectly flat/straight, front-on, no residual tilt */
-  .book-scene.stage-open{
+  /* opened book sits perfectly flat/straight, front-on, no residual tilt.
+     Selector deliberately more specific than ".book-overlay.show .book-scene"
+     above, otherwise that rule's tilt wins and the "open" state stays rotated. */
+  .book-overlay.show .book-scene.stage-open{
     width:min(92vw,660px);
     height:min(82vh,82dvh);
     max-height:600px;
@@ -1238,7 +1240,7 @@
     opacity:0; transition:opacity .5s ease .1s;
   }
   .book-overlay.show .book-scene::after{ opacity:.5; }
-  .book-scene.stage-open::after{ opacity:.3; bottom:-12px; }
+  .book-overlay.show .book-scene.stage-open::after{ opacity:.3; bottom:-12px; }
 
   /* fore-edge of the closed book — gilded page-block peeking past the cover */
   .book-fore-edge{
