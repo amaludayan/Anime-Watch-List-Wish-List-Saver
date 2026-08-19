@@ -31,6 +31,10 @@
     --jade-0:#2f6f56;       /* deep jade */
     --jade-1:#5fb894;       /* jade glow */
     --jade-2:#a9e8cf;       /* jade highlight */
+    --sakura:#e8879f;       /* sakura pink accent */
+    --indigo:#7c85c9;       /* ai-iro indigo accent */
+    --amber:#e0a758;        /* gold/amber accent */
+    --vermilion:#d97757;    /* torii vermilion accent */
     --ink-text:#e9e4da;     /* body text on dark */
     --ink-text-dim:#8b8d90;
     --font-display:'Shippori Mincho', serif;
@@ -664,6 +668,8 @@
     animation:cardIn .5s ease forwards;
     background:none; border:none; padding:0; margin:0; text-align:left;
     font-family:inherit; color:inherit;
+    content-visibility:auto;
+    contain-intrinsic-size:auto 260px;
   }
   @keyframes cardIn{ to{ opacity:1; transform:translateY(0); } }
 
@@ -693,9 +699,9 @@
     font-family:var(--font-mono);
     font-size:10.5px;
     padding:3px 6px;
-    backdrop-filter:blur(4px);
   }
-  .anime-card .poster .score svg{ width:10px; height:10px; fill:var(--jade-1); stroke:var(--jade-1); }
+  .anime-card .poster .score svg{ width:10px; height:10px; fill:var(--amber); stroke:var(--amber); }
+  .anime-card .poster .score{ color:var(--amber); }
 
   .anime-card .poster::after{
     content:"";
@@ -782,8 +788,20 @@
     font-family:var(--font-body);
     transition:color .2s ease, padding-left .2s ease;
   }
+  .genre-item::before{
+    content:""; display:inline-block; width:6px; height:6px; border-radius:50%;
+    margin-right:9px; background:var(--jade-1); opacity:.55; flex:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .genre-item:nth-child(5n+1)::before{ background:var(--jade-1); }
+  .genre-item:nth-child(5n+2)::before{ background:var(--sakura); }
+  .genre-item:nth-child(5n+3)::before{ background:var(--indigo); }
+  .genre-item:nth-child(5n+4)::before{ background:var(--amber); }
+  .genre-item:nth-child(5n+5)::before{ background:var(--vermilion); }
   .genre-item:hover{ color:var(--jade-1); padding-left:8px; }
+  .genre-item:hover::before{ opacity:1; transform:scale(1.3); }
   .genre-item.active{ color:var(--jade-1); }
+  .genre-item.active::before{ opacity:1; transform:scale(1.3); }
   .genre-item .count{
     font-family:var(--font-mono); font-size:10.5px; color:var(--ink-text-dim);
   }
@@ -796,20 +814,16 @@
   .modal-backdrop{
     position:fixed; inset:0; z-index:60;
     background:color-mix(in srgb, var(--ink-0) 72%, transparent);
-    backdrop-filter:blur(0px) saturate(1);
-    -webkit-backdrop-filter:blur(0px) saturate(1);
+    backdrop-filter:blur(14px) saturate(1.05);
+    -webkit-backdrop-filter:blur(14px) saturate(1.05);
     opacity:0;
     display:flex; align-items:flex-end; justify-content:center;
     pointer-events:none;
-    transition:opacity .7s cubic-bezier(.16,1,.3,1),
-               backdrop-filter .8s cubic-bezier(.16,1,.3,1),
-               -webkit-backdrop-filter .8s cubic-bezier(.16,1,.3,1);
+    transition:opacity .45s cubic-bezier(.16,1,.3,1);
   }
   @media (min-width:760px){ .modal-backdrop{ align-items:center; padding:32px; } }
   .modal-backdrop.open{
     opacity:1;
-    backdrop-filter:blur(14px) saturate(1.05);
-    -webkit-backdrop-filter:blur(14px) saturate(1.05);
     pointer-events:auto;
   }
 
@@ -836,11 +850,7 @@
   }
   .modal-backdrop.closing{
     opacity:0;
-    backdrop-filter:blur(0px) saturate(1);
-    -webkit-backdrop-filter:blur(0px) saturate(1);
-    transition:opacity .4s cubic-bezier(.4,0,.68,.06),
-               backdrop-filter .4s cubic-bezier(.4,0,.68,.06),
-               -webkit-backdrop-filter .4s cubic-bezier(.4,0,.68,.06);
+    transition:opacity .3s cubic-bezier(.4,0,.68,.06);
   }
   .modal-backdrop.closing .modal-panel{
     transform:translateY(24px) scale(.97);
@@ -965,21 +975,20 @@
   body.has-scrollbar-gap .modal-backdrop{ right:var(--scrollbar-gap, 0px); }
 
   /* Cinematic depth: the page content eases back and softens while the modal is open */
-  #app{ transition:transform .6s cubic-bezier(.22,.61,.36,1), filter .6s cubic-bezier(.22,.61,.36,1); transform-origin:50% 0; }
-  body.modal-open #app{ transform:scale(.975); filter:saturate(.85) brightness(.72) blur(1.5px); }
+  #app{ transition:transform .6s cubic-bezier(.22,.61,.36,1); transform-origin:50% 0; }
+  body.modal-open #app{ transform:scale(.975); }
 
   /* ============ FAB — add to list ============ */
   .fab-scrim{
     position:fixed; inset:0; z-index:70;
     background:color-mix(in srgb, var(--ink-0) 60%, transparent);
-    backdrop-filter:blur(0px);
-    -webkit-backdrop-filter:blur(0px);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
     opacity:0; pointer-events:none;
-    transition:opacity .45s cubic-bezier(.22,.61,.36,1), backdrop-filter .5s cubic-bezier(.22,.61,.36,1), -webkit-backdrop-filter .5s cubic-bezier(.22,.61,.36,1);
+    transition:opacity .3s cubic-bezier(.22,.61,.36,1);
   }
   .fab-scrim.show{
     opacity:1; pointer-events:auto;
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   }
 
   .fab-wrap{
@@ -1074,16 +1083,15 @@
   .picker-backdrop{
     position:fixed; inset:0; z-index:80;
     background:color-mix(in srgb, var(--ink-0) 78%, transparent);
-    backdrop-filter:blur(0px);
-    -webkit-backdrop-filter:blur(0px);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
     opacity:0; pointer-events:none;
     display:flex; align-items:flex-end; justify-content:center;
-    transition:opacity .5s cubic-bezier(.16,1,.3,1), backdrop-filter .6s cubic-bezier(.16,1,.3,1), -webkit-backdrop-filter .6s cubic-bezier(.16,1,.3,1);
+    transition:opacity .35s cubic-bezier(.16,1,.3,1);
   }
   @media (min-width:760px){ .picker-backdrop{ align-items:center; padding:32px; } }
   .picker-backdrop.open{
     opacity:1; pointer-events:auto;
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   }
   .picker-panel{
     position:relative;
@@ -1659,13 +1667,13 @@
   .subpanel-backdrop{
     position:fixed; inset:0; z-index:80;
     background:color-mix(in srgb, var(--ink-0) 78%, transparent);
-    backdrop-filter:blur(0px); -webkit-backdrop-filter:blur(0px);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     opacity:0; pointer-events:none;
     display:flex; align-items:flex-end; justify-content:center;
-    transition:opacity .5s cubic-bezier(.16,1,.3,1), backdrop-filter .6s cubic-bezier(.16,1,.3,1), -webkit-backdrop-filter .6s cubic-bezier(.16,1,.3,1);
+    transition:opacity .35s cubic-bezier(.16,1,.3,1);
   }
   @media (min-width:760px){ .subpanel-backdrop{ align-items:center; padding:32px; } }
-  .subpanel-backdrop.open{ opacity:1; pointer-events:auto; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .subpanel-backdrop.open{ opacity:1; pointer-events:auto; }
   .subpanel-panel{
     position:relative; width:100%; max-width:640px;
     max-height:86vh; max-height:86dvh;
